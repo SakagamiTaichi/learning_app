@@ -359,18 +359,6 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
           戻る
         </Button>
 
-        <Typography
-          variant="h4"
-          component="h1"
-          gutterBottom
-          sx={{
-            textAlign: "center",
-            mb: 3,
-            fontSize: { xs: "1.75rem", sm: "2rem", md: "2.125rem" },
-          }}
-        >
-          {mode === "add" ? "新規学習内容登録" : currentMode === "study" ? "学習モード" : mode === "view" ? "学習内容詳細" : "学習内容編集"}
-        </Typography>
 
         {(mode === "edit" || mode === "study" || mode === "view") && mode !== "view" && (
           <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>

@@ -399,20 +399,6 @@ const LearningDetail: React.FC = () => {
           </MenuItem>
         </Menu>
 
-        <Typography
-          variant="h4"
-          component="h1"
-          gutterBottom
-          sx={{
-            textAlign: "center",
-            mb: 4,
-            mt: 4,
-            fontSize: { xs: "1.025rem", sm: "1.5rem", md: "1.725rem" },
-          }}
-        >
-          {isEditing ? "学習内容編集" : "学習内容詳細"}
-        </Typography>
-
         {isEditing ? (
           <Box sx={{ mt: 2 }}>
             <TextField
@@ -586,7 +572,10 @@ const LearningDetail: React.FC = () => {
                   backgroundColor: "grey.50",
                 }}
               >
-                <Typography variant="h5" sx={{ fontWeight: "medium" }}>
+                <Typography
+                  variant="body1"
+                  sx={{ whiteSpace: "pre-wrap", lineHeight: 1.8 }}
+                >
                   {learning.topic}
                 </Typography>
               </Paper>

@@ -67,7 +67,7 @@ const Header: React.FC<HeaderProps> = ({ userEmail }) => {
         path: path,
         current: true,
       });
-    } else if (path.startsWith('/view/')) {
+    } else if (path.startsWith('/detail/')) {
       breadcrumbs.push({
         label: '詳細',
         icon: <SchoolIcon sx={{ mr: 0.5 }} fontSize="inherit" />,
@@ -136,7 +136,7 @@ const Header: React.FC<HeaderProps> = ({ userEmail }) => {
         </Box>
       </Toolbar>
 
-      {breadcrumbs.length > 1 && (
+      {(breadcrumbs.length > 1 || location.pathname === '/') && (
         <Box
           sx={{
             px: 2,

@@ -9,8 +9,17 @@ import {
   Fab,
   CircularProgress,
   Chip,
+  IconButton,
+  TextField,
+  Collapse,
+  InputAdornment,
 } from "@mui/material";
-import { Add as AddIcon } from "@mui/icons-material";
+import { 
+  Add as AddIcon, 
+  FilterList as FilterListIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon 
+} from "@mui/icons-material";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
@@ -27,6 +36,8 @@ interface LearningData {
 const LearningList: React.FC = () => {
   const [learnings, setLearnings] = useState<LearningData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [topicFilter, setTopicFilter] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -102,6 +113,19 @@ const LearningList: React.FC = () => {
     return content.substring(0, maxLength) + "...";
   };
 
+  const filteredLearnings = learnings.filter((learning) => {
+    if (!topicFilter) return true;
+    return learning.topic.toLowerCase().includes(topicFilter.toLowerCase());
+  });
+
+  const handleFilterToggle = () => {
+    setFilterOpen(!filterOpen);
+  };
+
+  const handleClearFilter = () => {
+    setTopicFilter("");
+  };
+
   if (loading) {
     return (
       <Box
@@ -128,28 +152,76 @@ const LearningList: React.FC = () => {
         boxSizing: 'border-box',
       }}
     >
-      <Box sx={{ textAlign: "center", mb: 4 }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          gutterBottom
-          sx={{
-            fontSize: { xs: "1.75rem", sm: "2rem", md: "2.125rem" },
-          }}
-        >
-          学習内容一覧
-        </Typography>
-        {learnings.some(learning => isOverdue(learning.reviewDate)) && (
-          <Chip
-            label={`復習期限切れ: ${learnings.filter(learning => isOverdue(learning.reviewDate)).length}件`}
-            color="error"
-            variant="filled"
-            sx={{ fontSize: "0.9rem", fontWeight: "bold" }}
-          />
-        )}
+      <Box sx={{ mb: 4 }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+          <Box sx={{ textAlign: "center", flex: 1 }}>
+            {learnings.some(learning => isOverdue(learning.reviewDate)) && (
+              <Chip
+                label={`復習期限切れ: ${learnings.filter(learning => isOverdue(learning.reviewDate)).length}件`}
+                color="error"
+                variant="filled"
+                sx={{ fontSize: "0.9rem", fontWeight: "bold" }}
+              />
+            )}
+          </Box>
+          <IconButton
+            onClick={handleFilterToggle}
+            color={filterOpen ? "primary" : "default"}
+            sx={{
+              border: 1,
+              borderColor: filterOpen ? "primary.main" : "divider",
+            }}
+          >
+            <FilterListIcon />
+          </IconButton>
+        </Box>
+
+        <Collapse in={filterOpen}>
+          <Box sx={{ mb: 3, px: 1 }}>
+            <TextField
+              fullWidth
+              label="トピック名で検索"
+              value={topicFilter}
+              onChange={(e) => setTopicFilter(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+                endAdornment: topicFilter && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={handleClearFilter}
+                      size="small"
+                      edge="end"
+                    >
+                      <ClearIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+              variant="outlined"
+              size="small"
+            />
+          </Box>
+        </Collapse>
       </Box>
 
-      {learnings.length === 0 ? (
+      {filteredLearnings.length === 0 && learnings.length > 0 ? (
+        <Box sx={{ textAlign: "center", mt: 8 }}>
+          <Typography variant="h6" color="text.secondary" sx={{ mb: 3 }}>
+            検索条件に一致する学習内容が見つかりません
+          </Typography>
+          <Button
+            variant="outlined"
+            onClick={handleClearFilter}
+            sx={{ px: 3, py: 1 }}
+          >
+            フィルターをクリア
+          </Button>
+        </Box>
+      ) : learnings.length === 0 ? (
         <Box sx={{ textAlign: "center", mt: 8 }}>
           <Typography variant="h6" color="text.secondary" sx={{ mb: 3 }}>
             まだ学習内容が登録されていません
@@ -172,7 +244,7 @@ const LearningList: React.FC = () => {
       ) : (
         <>
           <Grid container spacing={3}>
-            {learnings
+            {filteredLearnings
               .sort((a, b) => {
                 const aOverdue = isOverdue(a.reviewDate);
                 const bOverdue = isOverdue(b.reviewDate);
