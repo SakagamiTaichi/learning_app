@@ -345,10 +345,24 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
           variant="outlined"
           sx={{
             position: "absolute",
-            top: 16,
-            left: 16,
+            top: 20,
+            left: 20,
             borderRadius: 2,
-            px: 2,
+            px: 3,
+            py: 1,
+            fontWeight: 500,
+            zIndex: 10,
+            backgroundColor: "white",
+            borderColor: "grey.300",
+            color: "grey.700",
+            boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)",
+            transition: "all 0.2s ease-in-out",
+            '&:hover': {
+              backgroundColor: "grey.50",
+              borderColor: "grey.400",
+              transform: "translateY(-1px)",
+              boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+            },
             '&:focus': {
               outline: '2px solid',
               outlineColor: 'primary.main',
@@ -361,12 +375,44 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
 
 
         {(mode === "edit" || mode === "study" || mode === "view") && mode !== "view" && (
-          <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
+          <Box sx={{ 
+            display: "flex", 
+            justifyContent: "center", 
+            mb: 4,
+            pt: 2
+          }}>
             <ToggleButtonGroup
               value={currentMode}
               exclusive
               onChange={(_, newMode) => newMode && handleModeChange(newMode)}
               aria-label="mode selection"
+              sx={{
+                backgroundColor: "grey.100",
+                borderRadius: 2,
+                p: 0.5,
+                "& .MuiToggleButton-root": {
+                  border: "none",
+                  borderRadius: 1.5,
+                  px: 3,
+                  py: 1.5,
+                  fontWeight: 500,
+                  fontSize: "0.875rem",
+                  color: "grey.700",
+                  transition: "all 0.2s ease-in-out",
+                  "&.Mui-selected": {
+                    backgroundColor: "white",
+                    color: "primary.main",
+                    fontWeight: 600,
+                    boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)",
+                    "&:hover": {
+                      backgroundColor: "white",
+                    }
+                  },
+                  "&:hover": {
+                    backgroundColor: "grey.50",
+                  }
+                }
+              }}
             >
               <ToggleButton value="edit" aria-label="edit mode">
                 編集モード
@@ -379,24 +425,57 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
         )}
 
         {currentMode === "study" ? (
-          <Box sx={{ mt: 2 }}>
-            <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-              <Typography variant="h6" sx={{ mr: 2 }}>
-                トピック:
+          <Box sx={{ mt: 4 }}>
+            <Box sx={{ 
+              display: "flex", 
+              alignItems: "center", 
+              mb: 4,
+              p: 3,
+              backgroundColor: "primary.50",
+              borderRadius: 2,
+              border: "1px solid",
+              borderColor: "primary.100"
+            }}>
+              <Typography variant="h6" sx={{ mr: 3, fontWeight: 600, color: "primary.dark" }}>
+                学習トピック:
               </Typography>
-              <Chip label={topic} color="primary" variant="outlined" />
+              <Chip 
+                label={topic} 
+                color="primary" 
+                variant="filled"
+                sx={{
+                  fontWeight: 600,
+                  fontSize: "0.875rem",
+                  px: 1,
+                  borderRadius: 1.5
+                }}
+              />
             </Box>
 
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                <Typography variant="h6" sx={{ mr: 2 }}>
-                  学習内容:
+            <Box sx={{ mb: 4 }}>
+              <Box sx={{ 
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "space-between",
+                mb: 3,
+                p: 2,
+                backgroundColor: "grey.50",
+                borderRadius: 2
+              }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: "grey.800" }}>
+                  学習内容
                 </Typography>
                 <Button
-                  variant="outlined"
-                  size="small"
+                  variant={contentVisible ? "contained" : "outlined"}
+                  size="medium"
                   startIcon={contentVisible ? <VisibilityOffIcon /> : <VisibilityIcon />}
                   onClick={() => setContentVisible(!contentVisible)}
+                  sx={{
+                    borderRadius: 2,
+                    px: 3,
+                    fontWeight: 500,
+                    minWidth: "140px"
+                  }}
                 >
                   {contentVisible ? "内容を隠す" : "内容を表示"}
                 </Button>
@@ -406,28 +485,65 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
                 <Paper
                   variant="outlined"
                   sx={{
-                    p: 2,
-                    minHeight: "200px",
-                    backgroundColor: "grey.50",
+                    p: 4,
+                    minHeight: "300px",
+                    backgroundColor: "white",
+                    borderRadius: 2,
+                    border: "2px solid",
+                    borderColor: "grey.200",
+                    boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)"
                   }}
                 >
-                  <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      whiteSpace: "pre-wrap",
+                      lineHeight: 1.8,
+                      fontSize: "1rem",
+                      color: "grey.800"
+                    }}
+                  >
                     {content}
                   </Typography>
                 </Paper>
               )}
             </Box>
 
-            <Box sx={{ mb: 3 }}>
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: "grey.800" }}>
+                復習期限を設定
+              </Typography>
               <FormControl fullWidth>
-                <InputLabel>復習期限を選択</InputLabel>
+                <InputLabel sx={{ fontWeight: 500 }}>復習期限を選択してください</InputLabel>
                 <Select
                   value={reviewInterval}
-                  label="復習期限を選択"
+                  label="復習期限を選択してください"
                   onChange={(e) => setReviewInterval(e.target.value)}
+                  sx={{
+                    borderRadius: 2,
+                    "& .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "grey.300"
+                    },
+                    "&:hover .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "primary.main"
+                    },
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                      borderWidth: 2
+                    }
+                  }}
                 >
                   {reviewOptions.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
+                    <MenuItem 
+                      key={option.value} 
+                      value={option.value}
+                      sx={{
+                        py: 1.5,
+                        fontWeight: 500,
+                        "&:hover": {
+                          backgroundColor: "primary.50"
+                        }
+                      }}
+                    >
                       {option.label}
                     </MenuItem>
                   ))}
@@ -435,72 +551,157 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
               </FormControl>
             </Box>
 
-            <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+            <Box sx={{ 
+              display: "flex", 
+              justifyContent: "center", 
+              mt: 6,
+              p: 4,
+              backgroundColor: "success.50",
+              borderRadius: 2,
+              border: "1px solid",
+              borderColor: "success.200"
+            }}>
               <Button
                 variant="contained"
                 size="large"
                 disabled={loading || !reviewInterval || studyComplete}
                 onClick={handleStudyComplete}
                 sx={{
-                  px: { xs: 3, sm: 6 },
-                  py: 1.5,
-                  fontSize: "1.1rem",
+                  px: { xs: 4, sm: 8 },
+                  py: 2,
+                  fontSize: "1.125rem",
                   borderRadius: 2,
-                  minWidth: { xs: "200px", sm: "250px" },
+                  minWidth: { xs: "240px", sm: "300px" },
+                  fontWeight: 600,
+                  backgroundColor: studyComplete ? "success.main" : "primary.main",
+                  boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                  transition: "all 0.3s ease-in-out",
+                  "&:hover": {
+                    transform: studyComplete ? "none" : "translateY(-2px)",
+                    boxShadow: studyComplete ? "0 4px 6px -1px rgb(0 0 0 / 0.1)" : "0 10px 15px -3px rgb(0 0 0 / 0.15)"
+                  },
+                  "&:disabled": {
+                    backgroundColor: studyComplete ? "success.main" : "grey.300"
+                  }
                 }}
               >
-                {loading ? "設定中..." : studyComplete ? "完了しました" : "学習完了"}
+                {loading ? "設定中..." : studyComplete ? "✓ 完了しました" : "学習完了"}
               </Button>
             </Box>
           </Box>
         ) : (
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-          <TextField
-            fullWidth
-            label="トピック"
-            variant="outlined"
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            margin="normal"
-            required
-            sx={{ 
-              mb: 2,
-              '&:focus': {
-                outline: '2px solid',
-                outlineColor: 'primary.main',
-                outlineOffset: '2px',
-              },
-            }}
-            slotProps={{ htmlInput: { maxLength: 100 } }}
-            helperText={`${topic.length}/100文字`}
-          />
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 4 }}>
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: "grey.800" }}>
+              基本情報
+            </Typography>
+            <TextField
+              fullWidth
+              label="トピック"
+              variant="outlined"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              margin="normal"
+              required
+              sx={{ 
+                mb: 3,
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  backgroundColor: "white",
+                  "&:hover": {
+                    "& .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "primary.main"
+                    }
+                  },
+                  "&.Mui-focused": {
+                    "& .MuiOutlinedInput-notchedOutline": {
+                      borderWidth: 2,
+                      borderColor: "primary.main"
+                    }
+                  }
+                },
+                "& .MuiInputLabel-root": {
+                  fontWeight: 500
+                }
+              }}
+              slotProps={{ 
+                htmlInput: { maxLength: 100 },
+                formHelperText: {
+                  sx: {
+                    fontSize: "0.75rem",
+                    color: topic.length > 90 ? "warning.main" : "grey.600",
+                    fontWeight: 500
+                  }
+                }
+              }}
+              helperText={`${topic.length}/100文字`}
+            />
+          </Box>
 
-          <TextField
-            fullWidth
-            label="学習内容"
-            variant="outlined"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            margin="normal"
-            required
-            multiline
-            minRows={8}
-            maxRows={20}
-            sx={{ 
-              mb: 3,
-              '&:focus': {
-                outline: '2px solid',
-                outlineColor: 'primary.main',
-                outlineOffset: '2px',
-              },
-            }}
-            slotProps={{ htmlInput: { maxLength: 3000 } }}
-            helperText={`${content.length}/3000文字`}
-          />
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: "grey.800" }}>
+              学習内容詳細
+            </Typography>
+            <TextField
+              fullWidth
+              label="学習内容"
+              placeholder="学習した内容を詳しく記録してください..."
+              variant="outlined"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              margin="normal"
+              required
+              multiline
+              minRows={10}
+              maxRows={20}
+              sx={{ 
+                mb: 2,
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  backgroundColor: "white",
+                  "&:hover": {
+                    "& .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "primary.main"
+                    }
+                  },
+                  "&.Mui-focused": {
+                    "& .MuiOutlinedInput-notchedOutline": {
+                      borderWidth: 2,
+                      borderColor: "primary.main"
+                    }
+                  }
+                },
+                "& .MuiInputLabel-root": {
+                  fontWeight: 500
+                },
+                "& .MuiInputBase-input": {
+                  lineHeight: 1.7,
+                  fontSize: "1rem"
+                }
+              }}
+              slotProps={{ 
+                htmlInput: { maxLength: 3000 },
+                formHelperText: {
+                  sx: {
+                    fontSize: "0.75rem",
+                    color: content.length > 2700 ? "warning.main" : "grey.600",
+                    fontWeight: 500
+                  }
+                }
+              }}
+              helperText={`${content.length}/3000文字`}
+            />
+          </Box>
 
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2, display: "flex", alignItems: "center" }}>
-              <LinkIcon sx={{ mr: 1 }} />
+          <Box sx={{ mb: 5 }}>
+            <Typography variant="h6" sx={{ 
+              mb: 3, 
+              display: "flex", 
+              alignItems: "center",
+              fontWeight: 600, 
+              color: "grey.800"
+            }}>
+              <LinkIcon sx={{ mr: 1.5, color: "primary.main" }} />
               関連学習内容
             </Typography>
             
@@ -522,7 +723,29 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
                   {...params}
                   variant="outlined"
                   placeholder="関連する学習内容を選択..."
-                  helperText="複数選択可能です"
+                  helperText="この学習内容と関連のある過去の学習を選択してください（複数選択可能）"
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      backgroundColor: "white",
+                      "&:hover": {
+                        "& .MuiOutlinedInput-notchedOutline": {
+                          borderColor: "primary.main"
+                        }
+                      },
+                      "&.Mui-focused": {
+                        "& .MuiOutlinedInput-notchedOutline": {
+                          borderWidth: 2,
+                          borderColor: "primary.main"
+                        }
+                      }
+                    },
+                    "& .MuiFormHelperText-root": {
+                      fontSize: "0.75rem",
+                      color: "grey.600",
+                      fontWeight: 500
+                    }
+                  }}
                 />
               )}
               renderTags={(value, getTagProps) =>
@@ -533,11 +756,26 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
                       key={key}
                       variant="outlined"
                       label={option.topic}
+                      sx={{
+                        borderRadius: 1.5,
+                        fontWeight: 500,
+                        borderColor: "primary.main",
+                        color: "primary.main",
+                        backgroundColor: "primary.50"
+                      }}
                       {...tagProps}
                     />
                   );
                 })
               }
+              sx={{
+                "& .MuiAutocomplete-popupIndicator": {
+                  color: "grey.600"
+                },
+                "& .MuiAutocomplete-clearIndicator": {
+                  color: "grey.600"
+                }
+              }}
             />
           </Box>
 
@@ -545,8 +783,13 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
             sx={{
               display: "flex",
               justifyContent: "center",
-              gap: 2,
-              mt: 2,
+              gap: 3,
+              mt: 6,
+              p: 4,
+              backgroundColor: "grey.50",
+              borderRadius: 2,
+              border: "1px solid",
+              borderColor: "grey.200"
             }}
           >
             <Button
@@ -555,11 +798,22 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
               size="large"
               disabled={loading}
               sx={{
-                px: { xs: 3, sm: 6 },
-                py: 1.5,
-                fontSize: "1.1rem",
+                px: { xs: 4, sm: 8 },
+                py: 2,
+                fontSize: "1.125rem",
                 borderRadius: 2,
-                minWidth: { xs: "200px", sm: "250px" },
+                minWidth: { xs: "240px", sm: "300px" },
+                fontWeight: 600,
+                boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                transition: "all 0.3s ease-in-out",
+                "&:hover": {
+                  transform: "translateY(-2px)",
+                  boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.15)"
+                },
+                "&:disabled": {
+                  backgroundColor: "grey.400",
+                  transform: "none"
+                }
               }}
             >
               {loading
@@ -580,10 +834,26 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
                 disabled={loading}
                 onClick={() => setDeleteDialogOpen(true)}
                 sx={{
-                  px: { xs: 2, sm: 3 },
-                  py: 1.5,
-                  fontSize: "1.1rem",
+                  px: { xs: 3, sm: 4 },
+                  py: 2,
+                  fontSize: "1rem",
                   borderRadius: 2,
+                  fontWeight: 500,
+                  minWidth: "140px",
+                  borderColor: "error.300",
+                  color: "error.600",
+                  backgroundColor: "white",
+                  transition: "all 0.3s ease-in-out",
+                  "&:hover": {
+                    backgroundColor: "error.50",
+                    borderColor: "error.main",
+                    color: "error.main",
+                    transform: "translateY(-1px)"
+                  },
+                  "&:disabled": {
+                    borderColor: "grey.300",
+                    color: "grey.400"
+                  }
                 }}
               >
                 削除

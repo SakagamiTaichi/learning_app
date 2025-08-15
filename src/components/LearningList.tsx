@@ -152,41 +152,76 @@ const LearningList: React.FC = () => {
         boxSizing: 'border-box',
       }}
     >
-      <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-          <Box sx={{ textAlign: "center", flex: 1 }}>
+      <Box sx={{ mb: 6 }}>
+        <Box sx={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center", 
+          mb: 3,
+          flexWrap: { xs: "wrap", sm: "nowrap" },
+          gap: 2
+        }}>
+          <Box sx={{ 
+            flex: 1,
+            display: "flex",
+            justifyContent: { xs: "center", sm: "flex-start" },
+            order: { xs: 2, sm: 1 }
+          }}>
             {learnings.some(learning => isOverdue(learning.reviewDate)) && (
               <Chip
                 label={`復習期限切れ: ${learnings.filter(learning => isOverdue(learning.reviewDate)).length}件`}
                 color="error"
                 variant="filled"
-                sx={{ fontSize: "0.9rem", fontWeight: "bold" }}
+                icon={<ClearIcon sx={{ fontSize: "1rem" }} />}
+                sx={{ 
+                  fontSize: "0.875rem", 
+                  fontWeight: 600,
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: 2,
+                  boxShadow: 2
+                }}
               />
             )}
           </Box>
-          <IconButton
-            onClick={handleFilterToggle}
-            color={filterOpen ? "primary" : "default"}
-            sx={{
-              border: 1,
-              borderColor: filterOpen ? "primary.main" : "divider",
-            }}
-          >
-            <FilterListIcon />
-          </IconButton>
+          <Box sx={{ order: { xs: 1, sm: 2 } }}>
+            <Button
+              variant={filterOpen ? "contained" : "outlined"}
+              onClick={handleFilterToggle}
+              startIcon={<FilterListIcon />}
+              size="medium"
+              sx={{
+                borderRadius: 2,
+                px: 2.5,
+                py: 1,
+                fontWeight: 500,
+                minWidth: "120px"
+              }}
+            >
+              フィルター
+            </Button>
+          </Box>
         </Box>
 
         <Collapse in={filterOpen}>
-          <Box sx={{ mb: 3, px: 1 }}>
+          <Box sx={{ 
+            mb: 4, 
+            p: 3,
+            backgroundColor: "grey.50",
+            borderRadius: 2,
+            border: "1px solid",
+            borderColor: "grey.200"
+          }}>
             <TextField
               fullWidth
               label="トピック名で検索"
+              placeholder="検索したいトピックを入力..."
               value={topicFilter}
               onChange={(e) => setTopicFilter(e.target.value)}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon />
+                    <SearchIcon sx={{ color: "grey.500" }} />
                   </InputAdornment>
                 ),
                 endAdornment: topicFilter && (
@@ -195,36 +230,81 @@ const LearningList: React.FC = () => {
                       onClick={handleClearFilter}
                       size="small"
                       edge="end"
+                      sx={{
+                        color: "grey.600",
+                        "&:hover": {
+                          backgroundColor: "grey.100"
+                        }
+                      }}
                     >
-                      <ClearIcon />
+                      <ClearIcon fontSize="small" />
                     </IconButton>
                   </InputAdornment>
                 ),
               }}
               variant="outlined"
-              size="small"
+              size="medium"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  backgroundColor: "white",
+                  "&:hover": {
+                    backgroundColor: "white"
+                  }
+                }
+              }}
             />
           </Box>
         </Collapse>
       </Box>
 
       {filteredLearnings.length === 0 && learnings.length > 0 ? (
-        <Box sx={{ textAlign: "center", mt: 8 }}>
-          <Typography variant="h6" color="text.secondary" sx={{ mb: 3 }}>
-            検索条件に一致する学習内容が見つかりません
+        <Box sx={{ 
+          textAlign: "center", 
+          mt: 12,
+          py: 8,
+          px: 4,
+          backgroundColor: "grey.50",
+          borderRadius: 3,
+          border: "1px dashed",
+          borderColor: "grey.300"
+        }}>
+          <Typography variant="h5" sx={{ mb: 2, fontWeight: 600, color: "grey.700" }}>
+            検索結果が見つかりません
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 400, mx: "auto" }}>
+            「{topicFilter}」に一致する学習内容が見つかりませんでした。
+            別のキーワードで検索するか、フィルターをクリアしてください。
           </Typography>
           <Button
-            variant="outlined"
+            variant="contained"
             onClick={handleClearFilter}
-            sx={{ px: 3, py: 1 }}
+            sx={{ 
+              px: 4, 
+              py: 1.5,
+              borderRadius: 2,
+              fontWeight: 600
+            }}
           >
             フィルターをクリア
           </Button>
         </Box>
       ) : learnings.length === 0 ? (
-        <Box sx={{ textAlign: "center", mt: 8 }}>
-          <Typography variant="h6" color="text.secondary" sx={{ mb: 3 }}>
-            まだ学習内容が登録されていません
+        <Box sx={{ 
+          textAlign: "center", 
+          mt: 12,
+          py: 12,
+          px: 4,
+          backgroundColor: "gradient",
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          borderRadius: 3,
+          color: "white"
+        }}>
+          <Typography variant="h4" sx={{ mb: 3, fontWeight: 700 }}>
+            学習を始めましょう！
+          </Typography>
+          <Typography variant="body1" sx={{ mb: 6, opacity: 0.9, maxWidth: 500, mx: "auto" }}>
+            まだ学習内容が登録されていません。最初の学習内容を登録して、
+            効率的な学習管理を始めましょう。
           </Typography>
           <Button
             variant="contained"
@@ -232,13 +312,20 @@ const LearningList: React.FC = () => {
             onClick={handleAddNew}
             startIcon={<AddIcon />}
             sx={{
-              px: 4,
-              py: 1.5,
-              fontSize: "1.1rem",
+              px: 6,
+              py: 2,
+              fontSize: "1.125rem",
               borderRadius: 2,
+              backgroundColor: "white",
+              color: "primary.main",
+              fontWeight: 600,
+              "&:hover": {
+                backgroundColor: "grey.100",
+                transform: "translateY(-2px)"
+              }
             }}
           >
-            最初の学習内容を登録する
+            最初の学習内容を登録
           </Button>
         </Box>
       ) : (
@@ -257,36 +344,68 @@ const LearningList: React.FC = () => {
                 const overdue = isOverdue(learning.reviewDate);
                 
                 return (
-                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={learning.id}>
+                  <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={learning.id}>
                     <Card
                       sx={{
-                        transition: "all 0.2s ease-in-out",
-                        "&:hover": {
-                          transform: "translateY(-4px)",
-                          boxShadow: 6,
-                        },
                         height: "100%",
                         display: "flex",
                         flexDirection: "column",
-                        border: overdue ? "2px solid" : "1px solid",
-                        borderColor: overdue ? "error.main" : "divider",
-                        backgroundColor: overdue ? "error.50" : "background.paper",
                         cursor: "pointer",
+                        position: "relative",
+                        overflow: "hidden",
+                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                        border: overdue ? "2px solid" : "1px solid",
+                        borderColor: overdue ? "error.main" : "grey.200",
+                        backgroundColor: overdue ? "error.50" : "white",
+                        "&:hover": {
+                          transform: "translateY(-8px) scale(1.02)",
+                          boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.15), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+                          borderColor: overdue ? "error.main" : "primary.main",
+                          "& .card-actions": {
+                            opacity: 1,
+                            transform: "translateY(0)"
+                          }
+                        },
+                        "&:before": overdue ? {
+                          content: '""',
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: "4px",
+                          background: "linear-gradient(90deg, #ef4444, #f87171)",
+                          zIndex: 1
+                        } : {}
                       }}
                       onClick={() => handleCardClick(learning.id)}
                     >
-                      <CardContent sx={{ flexGrow: 1 }}>
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
+                      <CardContent sx={{ 
+                        flexGrow: 1, 
+                        p: 3,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 2
+                      }}>
+                        <Box sx={{ 
+                          display: "flex", 
+                          justifyContent: "space-between", 
+                          alignItems: "flex-start", 
+                          gap: 2
+                        }}>
                           <Typography
                             variant="h6"
                             component="h2"
                             sx={{
-                              fontWeight: "bold",
+                              fontWeight: 700,
+                              color: overdue ? "error.dark" : "grey.900",
+                              fontSize: "1.125rem",
+                              lineHeight: 1.4,
                               overflow: "hidden",
                               textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                              flex: 1,
-                              mr: 1,
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              flex: 1
                             }}
                           >
                             {learning.topic}
@@ -296,38 +415,85 @@ const LearningList: React.FC = () => {
                             color={reviewStatus.color}
                             size="small"
                             variant={overdue ? "filled" : "outlined"}
+                            sx={{
+                              flexShrink: 0,
+                              fontWeight: 600,
+                              borderRadius: 1.5,
+                              "& .MuiChip-label": {
+                                px: 1
+                              }
+                            }}
                           />
                         </Box>
+                        
                         <Typography
                           variant="body2"
-                          color="text.secondary"
                           sx={{
-                            mb: 2,
-                            lineHeight: 1.6,
+                            color: "grey.700",
+                            lineHeight: 1.7,
+                            fontSize: "0.875rem",
                             display: "-webkit-box",
                             WebkitLineClamp: 3,
                             WebkitBoxOrient: "vertical",
                             overflow: "hidden",
+                            flex: 1
                           }}
                         >
-                          {getContentPreview(learning.content)}
+                          {getContentPreview(learning.content, 120)}
                         </Typography>
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{ fontWeight: "medium" }}
-                        >
-                          登録日: {formatDate(learning.createdAt)}
-                        </Typography>
-                        {learning.reviewDate && (
+                        
+                        <Box sx={{ 
+                          pt: 1,
+                          borderTop: "1px solid",
+                          borderColor: "grey.100",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 0.5
+                        }}>
                           <Typography
                             variant="caption"
-                            color="text.secondary"
-                            sx={{ fontWeight: "medium", display: "block" }}
+                            sx={{ 
+                              color: "grey.600",
+                              fontWeight: 500,
+                              fontSize: "0.75rem"
+                            }}
                           >
-                            復習予定: {formatDate(learning.reviewDate)}
+                            登録: {formatDate(learning.createdAt)}
                           </Typography>
-                        )}
+                          {learning.reviewDate && (
+                            <Typography
+                              variant="caption"
+                              sx={{ 
+                                color: overdue ? "error.main" : "grey.600",
+                                fontWeight: 500,
+                                fontSize: "0.75rem"
+                              }}
+                            >
+                              復習: {formatDate(learning.reviewDate)}
+                            </Typography>
+                          )}
+                        </Box>
+                        
+                        <Box 
+                          className="card-actions"
+                          sx={{
+                            opacity: 0,
+                            transform: "translateY(8px)",
+                            transition: "all 0.2s ease-in-out",
+                            pt: 1
+                          }}
+                        >
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: "primary.main",
+                              fontWeight: 600,
+                              fontSize: "0.75rem"
+                            }}
+                          >
+                            クリックして詳細を表示 →
+                          </Typography>
+                        </Box>
                       </CardContent>
                     </Card>
                   </Grid>
@@ -341,11 +507,22 @@ const LearningList: React.FC = () => {
             onClick={handleAddNew}
             sx={{
               position: "fixed",
-              bottom: 32,
-              right: 32,
+              bottom: { xs: 24, sm: 32 },
+              right: { xs: 24, sm: 32 },
+              width: 64,
+              height: 64,
+              boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              "&:hover": {
+                transform: "scale(1.1) translateY(-4px)",
+                boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.15), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+              },
+              "&:active": {
+                transform: "scale(1.05)"
+              }
             }}
           >
-            <AddIcon />
+            <AddIcon sx={{ fontSize: "1.75rem" }} />
           </Fab>
         </>
       )}

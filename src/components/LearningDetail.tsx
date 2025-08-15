@@ -400,7 +400,7 @@ const LearningDetail: React.FC = () => {
         </Menu>
 
         {isEditing ? (
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ mt: 16 }}>
             <TextField
               fullWidth
               label="トピック"
@@ -513,7 +513,7 @@ const LearningDetail: React.FC = () => {
             </Box>
           </Box>
         ) : (
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ mt: 16 }}>
             <Box sx={{ mb: 4 }}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: "bold" }}>
                 復習設定:
