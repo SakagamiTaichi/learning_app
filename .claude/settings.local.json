@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(mv:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm install:*)"
+    ],
+    "defaultMode": "acceptEdits"
+  }
+}
