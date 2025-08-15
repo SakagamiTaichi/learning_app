@@ -11,7 +11,7 @@ import {
   Chip,
   CardActions,
 } from "@mui/material";
-import { Add as AddIcon, Edit as EditIcon, School as SchoolIcon } from "@mui/icons-material";
+import { Add as AddIcon, Edit as EditIcon, School as SchoolIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
@@ -22,6 +22,7 @@ interface LearningData {
   content: string;
   createdAt: Date;
   reviewDate?: Date;
+  relatedLearnings?: string[];
 }
 
 const LearningList: React.FC = () => {
@@ -66,6 +67,11 @@ const LearningList: React.FC = () => {
   const handleStudyClick = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     navigate(`/study/${id}`);
+  };
+
+  const handleViewClick = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/view/${id}`);
   };
 
   const isOverdue = (reviewDate?: Date): boolean => {
@@ -252,7 +258,15 @@ const LearningList: React.FC = () => {
                           </Typography>
                         )}
                       </CardContent>
-                      <CardActions sx={{ justifyContent: "space-between", px: 2, pb: 2 }}>
+                      <CardActions sx={{ justifyContent: "space-between", px: 2, pb: 2, flexWrap: "wrap", gap: 1 }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<VisibilityIcon />}
+                          onClick={(e) => handleViewClick(learning.id, e)}
+                        >
+                          詳細
+                        </Button>
                         <Button
                           size="small"
                           variant="outlined"

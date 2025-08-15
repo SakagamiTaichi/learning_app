@@ -56,6 +56,7 @@ function App() {
           <Route path="/add" element={<LearningForm mode="add" />} />
           <Route path="/edit/:id" element={<LearningForm mode="edit" />} />
           <Route path="/study/:id" element={<LearningForm mode="study" />} />
+          <Route path="/view/:id" element={<LearningForm mode="view" />} />
         </Routes>
       </Router>
     </ThemeProvider>

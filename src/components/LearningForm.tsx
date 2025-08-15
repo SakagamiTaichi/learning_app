@@ -15,14 +15,27 @@ import {
   FormControl,
   InputLabel,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Autocomplete,
+  Card,
+  CardContent,
+  CardActionArea,
 } from "@mui/material";
-import { ArrowBack as ArrowBackIcon, Visibility as VisibilityIcon, VisibilityOff as VisibilityOffIcon } from "@mui/icons-material";
+import { ArrowBack as ArrowBackIcon, Visibility as VisibilityIcon, VisibilityOff as VisibilityOffIcon, Delete as DeleteIcon, Link as LinkIcon } from "@mui/icons-material";
 import {
   collection,
   addDoc,
   doc,
   getDoc,
   updateDoc,
+  deleteDoc,
+  getDocs,
+  query,
+  orderBy,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { useNavigate, useParams } from "react-router-dom";
@@ -32,21 +45,30 @@ interface LearningData {
   content: string;
   createdAt: Date;
   reviewDate?: Date;
+  relatedLearnings?: string[];
 }
 
 interface LearningFormProps {
-  mode: "add" | "edit" | "study";
+  mode: "add" | "edit" | "study" | "view";
+}
+
+interface LearningListItem {
+  id: string;
+  topic: string;
 }
 
 const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
   const [topic, setTopic] = useState("");
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
-  const [fetchLoading, setFetchLoading] = useState(mode === "edit" || mode === "study");
+  const [fetchLoading, setFetchLoading] = useState(mode === "edit" || mode === "study" || mode === "view");
   const [currentMode, setCurrentMode] = useState(mode);
   const [reviewInterval, setReviewInterval] = useState<string>("");
   const [contentVisible, setContentVisible] = useState(mode !== "study");
   const [studyComplete, setStudyComplete] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [relatedLearnings, setRelatedLearnings] = useState<string[]>([]);
+  const [availableLearnings, setAvailableLearnings] = useState<LearningListItem[]>([]);
   const [alert, setAlert] = useState<{
     open: boolean;
     message: string;
@@ -61,8 +83,29 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
   const { id } = useParams<{ id: string }>();
 
   useEffect(() => {
-    if ((mode === "edit" || mode === "study") && id) {
-      const fetchLearning = async () => {
+    const fetchAvailableLearnings = async () => {
+      try {
+        const q = query(
+          collection(db, "learnings"),
+          orderBy("createdAt", "desc")
+        );
+        
+        const querySnapshot = await getDocs(q);
+        const learningsList = querySnapshot.docs
+          .filter((doc) => doc.id !== id) // 自分自身を除外
+          .map((doc) => ({
+            id: doc.id,
+            topic: doc.data().topic,
+          }));
+        
+        setAvailableLearnings(learningsList);
+      } catch (error) {
+        console.error("Error fetching available learnings: ", error);
+      }
+    };
+
+    const fetchLearning = async () => {
+      if ((mode === "edit" || mode === "study" || mode === "view") && id) {
         try {
           const docRef = doc(db, "learnings", id);
           const docSnap = await getDoc(docRef);
@@ -71,6 +114,7 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
             const data = docSnap.data();
             setTopic(data.topic);
             setContent(data.content);
+            setRelatedLearnings(data.relatedLearnings || []);
             if (mode === "study") {
               setContentVisible(false);
             }
@@ -92,10 +136,13 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
         } finally {
           setFetchLoading(false);
         }
-      };
+      } else {
+        setFetchLoading(false);
+      }
+    };
 
-      fetchLearning();
-    }
+    fetchAvailableLearnings();
+    fetchLearning();
   }, [mode, id, navigate]);
 
   const reviewOptions = [
@@ -178,6 +225,7 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
           topic: topic.trim(),
           content: content.trim(),
           createdAt: new Date(),
+          relatedLearnings: relatedLearnings,
         };
 
         await addDoc(collection(db, "learnings"), learningData);
@@ -195,6 +243,7 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
         await updateDoc(docRef, {
           topic: topic.trim(),
           content: content.trim(),
+          relatedLearnings: relatedLearnings,
         });
 
         setAlert({
@@ -219,6 +268,34 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
 
   const handleCloseAlert = () => {
     setAlert({ ...alert, open: false });
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+
+    setLoading(true);
+    try {
+      const docRef = doc(db, "learnings", id);
+      await deleteDoc(docRef);
+
+      setAlert({
+        open: true,
+        message: "学習内容を削除しました。",
+        severity: "success",
+      });
+
+      setTimeout(() => navigate("/"), 1500);
+    } catch (error) {
+      console.error("Error deleting document: ", error);
+      setAlert({
+        open: true,
+        message: "削除中にエラーが発生しました。",
+        severity: "error",
+      });
+    } finally {
+      setLoading(false);
+      setDeleteDialogOpen(false);
+    }
   };
 
   const handleBack = () => {
@@ -288,10 +365,10 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
             fontSize: { xs: "1.75rem", sm: "2rem", md: "2.125rem" },
           }}
         >
-          {mode === "add" ? "新規学習内容登録" : currentMode === "study" ? "学習モード" : "学習内容編集"}
+          {mode === "add" ? "新規学習内容登録" : currentMode === "study" ? "学習モード" : mode === "view" ? "学習内容詳細" : "学習内容編集"}
         </Typography>
 
-        {(mode === "edit" || mode === "study") && (
+        {(mode === "edit" || mode === "study" || mode === "view") && mode !== "view" && (
           <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
             <ToggleButtonGroup
               value={currentMode}
@@ -408,16 +485,60 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
             margin="normal"
             required
             multiline
-            rows={18}
+            rows={16}
             sx={{ mb: 3 }}
             slotProps={{ htmlInput: { maxLength: 3000 } }}
             helperText={`${content.length}/3000文字`}
           />
 
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2, display: "flex", alignItems: "center" }}>
+              <LinkIcon sx={{ mr: 1 }} />
+              関連学習内容
+            </Typography>
+            
+            <Autocomplete
+              multiple
+              options={availableLearnings}
+              getOptionLabel={(option) => option.topic}
+              value={
+                relatedLearnings.length > 0 && availableLearnings.length > 0
+                  ? availableLearnings.filter(learning => relatedLearnings.includes(learning.id))
+                  : []
+              }
+              onChange={(_, newValue) => {
+                setRelatedLearnings(newValue.map(item => item.id));
+              }}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  variant="outlined"
+                  placeholder="関連する学習内容を選択..."
+                  helperText="複数選択可能です"
+                />
+              )}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => {
+                  const { key, ...tagProps } = getTagProps({ index });
+                  return (
+                    <Chip
+                      key={key}
+                      variant="outlined"
+                      label={option.topic}
+                      {...tagProps}
+                    />
+                  );
+                })
+              }
+            />
+          </Box>
+
           <Box
             sx={{
               display: "flex",
               justifyContent: "center",
+              gap: 2,
               mt: 2,
             }}
           >
@@ -442,8 +563,136 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
                   ? "学習内容を保存"
                   : "学習内容を更新"}
             </Button>
+            
+            {mode === "edit" && (
+              <Button
+                variant="outlined"
+                size="large"
+                color="error"
+                startIcon={<DeleteIcon />}
+                disabled={loading}
+                onClick={() => setDeleteDialogOpen(true)}
+                sx={{
+                  px: { xs: 2, sm: 3 },
+                  py: 1.5,
+                  fontSize: "1.1rem",
+                  borderRadius: 2,
+                }}
+              >
+                削除
+              </Button>
+            )}
           </Box>
         </Box>
+        )} 
+
+        {mode === "view" && (
+          <Box sx={{ mt: 2 }}>
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: "bold" }}>
+                トピック:
+              </Typography>
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  backgroundColor: "grey.50",
+                }}
+              >
+                <Typography variant="h5" sx={{ fontWeight: "medium" }}>
+                  {topic}
+                </Typography>
+              </Paper>
+            </Box>
+
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: "bold" }}>
+                学習内容:
+              </Typography>
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 3,
+                  minHeight: "300px",
+                  backgroundColor: "grey.50",
+                }}
+              >
+                <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.8 }}>
+                  {content}
+                </Typography>
+              </Paper>
+            </Box>
+
+            {relatedLearnings.length > 0 && (
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: "bold", display: "flex", alignItems: "center" }}>
+                  <LinkIcon sx={{ mr: 1 }} />
+                  関連学習内容
+                </Typography>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+                  {relatedLearnings.map((relatedId) => {
+                    const relatedLearning = availableLearnings.find(learning => learning.id === relatedId);
+                    if (!relatedLearning) return null;
+                    
+                    return (
+                      <Card
+                        key={relatedId}
+                        sx={{
+                          minWidth: "250px",
+                          cursor: "pointer",
+                          transition: "all 0.2s ease-in-out",
+                          "&:hover": {
+                            transform: "translateY(-2px)",
+                            boxShadow: 4,
+                          },
+                        }}
+                      >
+                        <CardActionArea
+                          onClick={() => navigate(`/view/${relatedId}`)}
+                          sx={{ p: 2 }}
+                        >
+                          <CardContent sx={{ p: 0 }}>
+                            <Typography variant="body1" sx={{ fontWeight: "medium" }}>
+                              {relatedLearning.topic}
+                            </Typography>
+                          </CardContent>
+                        </CardActionArea>
+                      </Card>
+                    );
+                  })}
+                </Box>
+              </Box>
+            )}
+
+            <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mt: 4 }}>
+              <Button
+                variant="outlined"
+                size="large"
+                onClick={() => navigate(`/edit/${id}`)}
+                sx={{
+                  px: 4,
+                  py: 1.5,
+                  fontSize: "1.1rem",
+                  borderRadius: 2,
+                }}
+              >
+                編集
+              </Button>
+              <Button
+                variant="contained"
+                size="large"
+                onClick={() => navigate(`/study/${id}`)}
+                sx={{
+                  px: 4,
+                  py: 1.5,
+                  fontSize: "1.1rem",
+                  borderRadius: 2,
+                }}
+              >
+                学習モード
+              </Button>
+            </Box>
+          </Box>
         )}
       </Paper>
       <Snackbar
@@ -460,6 +709,43 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
           {alert.message}
         </Alert>
       </Snackbar>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+      >
+        <DialogTitle id="delete-dialog-title">
+          学習内容を削除
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-dialog-description">
+            この学習内容を削除してもよろしいですか？
+            <br />
+            <strong>"{topic}"</strong>
+            <br />
+            この操作は取り消せません。
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDeleteDialogOpen(false)} 
+            disabled={loading}
+          >
+            キャンセル
+          </Button>
+          <Button 
+            onClick={handleDelete} 
+            color="error" 
+            variant="contained"
+            disabled={loading}
+            autoFocus
+          >
+            {loading ? "削除中..." : "削除"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
