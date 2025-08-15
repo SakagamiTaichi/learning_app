@@ -7,7 +7,6 @@ import {
   Paper,
   Alert,
   Snackbar,
-  IconButton,
   ToggleButton,
   ToggleButtonGroup,
   Select,
@@ -25,6 +24,7 @@ import {
   CardContent,
   CardActionArea,
 } from "@mui/material";
+import LoadingSpinner from './LoadingSpinner';
 import { ArrowBack as ArrowBackIcon, Visibility as VisibilityIcon, VisibilityOff as VisibilityOffIcon, Delete as DeleteIcon, Link as LinkIcon } from "@mui/icons-material";
 import {
   collection,
@@ -312,7 +312,7 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
           justifyContent: "center",
         }}
       >
-        <Typography>読み込み中...</Typography>
+        <LoadingSpinner message="学習内容を読み込み中..." size={50} />
       </Box>
     );
   }
@@ -320,40 +320,44 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
   return (
     <Box
       sx={{
-        minHeight: "100vh",
-        width: "100vw",
-        display: "flex",
-        alignItems: "center",
-        p: 2,
+        minHeight: "calc(100vh - 64px)", // Subtract header height
+        p: { xs: 2, sm: 3 },
+        width: "100%",
+        margin: 0,
+        boxSizing: 'border-box',
       }}
     >
-      <Paper
-        elevation={3}
-        sx={{
-          p: { xs: 3, sm: 4, md: 6 },
-          borderRadius: 2,
-          minHeight: "calc(100vh - 32px)",
-          width: "calc(100vw - 32px)",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          position: "relative",
-        }}
-      >
-        <IconButton
+        <Paper
+          elevation={3}
+          sx={{
+            p: { xs: 3, sm: 4, md: 5 },
+            borderRadius: 3,
+            minHeight: "calc(100vh - 128px)",
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            position: "relative",
+          }}
+        >
+        <Button
           onClick={handleBack}
+          startIcon={<ArrowBackIcon />}
+          variant="outlined"
           sx={{
             position: "absolute",
             top: 16,
             left: 16,
-            bgcolor: "background.paper",
-            "&:hover": {
-              bgcolor: "action.hover",
+            borderRadius: 2,
+            px: 2,
+            '&:focus': {
+              outline: '2px solid',
+              outlineColor: 'primary.main',
+              outlineOffset: '2px',
             },
           }}
         >
-          <ArrowBackIcon />
-        </IconButton>
+          戻る
+        </Button>
 
         <Typography
           variant="h4"
@@ -471,7 +475,14 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
             onChange={(e) => setTopic(e.target.value)}
             margin="normal"
             required
-            sx={{ mb: 2 }}
+            sx={{ 
+              mb: 2,
+              '&:focus': {
+                outline: '2px solid',
+                outlineColor: 'primary.main',
+                outlineOffset: '2px',
+              },
+            }}
             slotProps={{ htmlInput: { maxLength: 100 } }}
             helperText={`${topic.length}/100文字`}
           />
@@ -485,8 +496,16 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
             margin="normal"
             required
             multiline
-            rows={16}
-            sx={{ mb: 3 }}
+            minRows={8}
+            maxRows={20}
+            sx={{ 
+              mb: 3,
+              '&:focus': {
+                outline: '2px solid',
+                outlineColor: 'primary.main',
+                outlineOffset: '2px',
+              },
+            }}
             slotProps={{ htmlInput: { maxLength: 3000 } }}
             helperText={`${content.length}/3000文字`}
           />
@@ -694,7 +713,8 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
             </Box>
           </Box>
         )}
-      </Paper>
+        </Paper>
+      
       <Snackbar
         open={alert.open}
         autoHideDuration={6000}

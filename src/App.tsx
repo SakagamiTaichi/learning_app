@@ -1,11 +1,15 @@
-import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
+import { ThemeProvider, createTheme, CssBaseline, Box } from "@mui/material";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "./firebase";
-import LearningList from "./components/LearningList";
-import LearningForm from "./components/LearningForm";
-import Login from "./components/Login";
+import LoadingSpinner from "./components/LoadingSpinner";
+
+const LearningList = lazy(() => import("./components/LearningList"));
+const LearningForm = lazy(() => import("./components/LearningForm"));
+const LearningDetail = lazy(() => import("./components/LearningDetail"));
+const Login = lazy(() => import("./components/Login"));
+const Header = lazy(() => import("./components/Header"));
 
 const theme = createTheme({
   palette: {
@@ -18,6 +22,30 @@ const theme = createTheme({
   },
   typography: {
     fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+  },
+  components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        html: {
+          margin: 0,
+          padding: 0,
+          width: '100%',
+          height: '100%',
+        },
+        body: {
+          margin: 0,
+          padding: 0,
+          width: '100%',
+          minHeight: '100vh',
+        },
+        '#root': {
+          margin: 0,
+          padding: 0,
+          width: '100%',
+          minHeight: '100vh',
+        }
+      },
+    },
   },
 });
 
@@ -35,14 +63,31 @@ function App() {
   }, []);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box
+          sx={{
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'background.default',
+          }}
+        >
+          <LoadingSpinner message="アプリを読み込み中..." size={60} />
+        </Box>
+      </ThemeProvider>
+    );
   }
 
   if (!user) {
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <Login />
+        <Suspense fallback={<LoadingSpinner message="ログインページを読み込み中..." size={60} />}>
+          <Login />
+        </Suspense>
       </ThemeProvider>
     );
   }
@@ -51,13 +96,25 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
-        <Routes>
-          <Route path="/" element={<LearningList />} />
-          <Route path="/add" element={<LearningForm mode="add" />} />
-          <Route path="/edit/:id" element={<LearningForm mode="edit" />} />
-          <Route path="/study/:id" element={<LearningForm mode="study" />} />
-          <Route path="/view/:id" element={<LearningForm mode="view" />} />
-        </Routes>
+        <Box sx={{ 
+          minHeight: '100vh', 
+          width: '100%',
+          margin: 0,
+          padding: 0,
+          backgroundColor: 'background.default' 
+        }}>
+          <Suspense fallback={<LoadingSpinner message="ヘッダーを読み込み中..." size={40} />}>
+            <Header userEmail={user?.email || ''} />
+          </Suspense>
+          <Suspense fallback={<LoadingSpinner message="ページを読み込み中..." size={60} />}>
+            <Routes>
+              <Route path="/" element={<LearningList />} />
+              <Route path="/add" element={<LearningForm mode="add" />} />
+              <Route path="/detail/:id" element={<LearningDetail />} />
+              <Route path="/study/:id" element={<LearningForm mode="study" />} />
+            </Routes>
+          </Suspense>
+        </Box>
       </Router>
     </ThemeProvider>
   );

@@ -25,7 +25,7 @@ const Login: React.FC = () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       console.log('ログイン成功');
-    } catch (error: any) {
+    } catch (error: unknown) {
       setError('ログインに失敗しました。メールアドレスとパスワードを確認してください。');
       console.error('ログインエラー:', error);
     } finally {
@@ -34,16 +34,17 @@ const Login: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-        }}
-      >
+    <Box
+      sx={{
+        minHeight: '100vh',
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        px: 2,
+      }}
+    >
+      <Container maxWidth="sm" sx={{ width: '100%' }}>
         <Paper
           elevation={3}
           sx={{
@@ -97,8 +98,8 @@ const Login: React.FC = () => {
             </Button>
           </Box>
         </Paper>
-      </Box>
-    </Container>
+      </Container>
+    </Box>
   );
 };
 

@@ -9,9 +9,8 @@ import {
   Fab,
   CircularProgress,
   Chip,
-  CardActions,
 } from "@mui/material";
-import { Add as AddIcon, Edit as EditIcon, School as SchoolIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
+import { Add as AddIcon } from "@mui/icons-material";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
@@ -59,19 +58,8 @@ const LearningList: React.FC = () => {
     fetchLearnings();
   }, []);
 
-  const handleEditClick = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigate(`/edit/${id}`);
-  };
-
-  const handleStudyClick = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigate(`/study/${id}`);
-  };
-
-  const handleViewClick = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigate(`/view/${id}`);
+  const handleCardClick = (id: string) => {
+    navigate(`/detail/${id}`);
   };
 
   const isOverdue = (reviewDate?: Date): boolean => {
@@ -130,7 +118,16 @@ const LearningList: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 3, minHeight: "100vh" }}>
+    <Box 
+      sx={{ 
+        minHeight: "calc(100vh - 64px)", 
+        width: "100%",
+        px: { xs: 2, sm: 3, md: 4 },
+        py: 3,
+        margin: 0,
+        boxSizing: 'border-box',
+      }}
+    >
       <Box sx={{ textAlign: "center", mb: 4 }}>
         <Typography
           variant="h4"
@@ -202,7 +199,9 @@ const LearningList: React.FC = () => {
                         border: overdue ? "2px solid" : "1px solid",
                         borderColor: overdue ? "error.main" : "divider",
                         backgroundColor: overdue ? "error.50" : "background.paper",
+                        cursor: "pointer",
                       }}
+                      onClick={() => handleCardClick(learning.id)}
                     >
                       <CardContent sx={{ flexGrow: 1 }}>
                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
@@ -258,33 +257,6 @@ const LearningList: React.FC = () => {
                           </Typography>
                         )}
                       </CardContent>
-                      <CardActions sx={{ justifyContent: "space-between", px: 2, pb: 2, flexWrap: "wrap", gap: 1 }}>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<VisibilityIcon />}
-                          onClick={(e) => handleViewClick(learning.id, e)}
-                        >
-                          詳細
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<SchoolIcon />}
-                          onClick={(e) => handleStudyClick(learning.id, e)}
-                          color={overdue ? "error" : "primary"}
-                        >
-                          学習
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<EditIcon />}
-                          onClick={(e) => handleEditClick(learning.id, e)}
-                        >
-                          編集
-                        </Button>
-                      </CardActions>
                     </Card>
                   </Grid>
                 );
