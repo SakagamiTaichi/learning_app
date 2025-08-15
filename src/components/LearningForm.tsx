@@ -8,8 +8,15 @@ import {
   Alert,
   Snackbar,
   IconButton,
+  ToggleButton,
+  ToggleButtonGroup,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Chip,
 } from "@mui/material";
-import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
+import { ArrowBack as ArrowBackIcon, Visibility as VisibilityIcon, VisibilityOff as VisibilityOffIcon } from "@mui/icons-material";
 import {
   collection,
   addDoc,
@@ -24,17 +31,22 @@ interface LearningData {
   topic: string;
   content: string;
   createdAt: Date;
+  reviewDate?: Date;
 }
 
 interface LearningFormProps {
-  mode: "add" | "edit";
+  mode: "add" | "edit" | "study";
 }
 
 const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
   const [topic, setTopic] = useState("");
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
-  const [fetchLoading, setFetchLoading] = useState(mode === "edit");
+  const [fetchLoading, setFetchLoading] = useState(mode === "edit" || mode === "study");
+  const [currentMode, setCurrentMode] = useState(mode);
+  const [reviewInterval, setReviewInterval] = useState<string>("");
+  const [contentVisible, setContentVisible] = useState(mode !== "study");
+  const [studyComplete, setStudyComplete] = useState(false);
   const [alert, setAlert] = useState<{
     open: boolean;
     message: string;
@@ -49,7 +61,7 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
   const { id } = useParams<{ id: string }>();
 
   useEffect(() => {
-    if (mode === "edit" && id) {
+    if ((mode === "edit" || mode === "study") && id) {
       const fetchLearning = async () => {
         try {
           const docRef = doc(db, "learnings", id);
@@ -59,6 +71,9 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
             const data = docSnap.data();
             setTopic(data.topic);
             setContent(data.content);
+            if (mode === "study") {
+              setContentVisible(false);
+            }
           } else {
             setAlert({
               open: true,
@@ -82,6 +97,66 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
       fetchLearning();
     }
   }, [mode, id, navigate]);
+
+  const reviewOptions = [
+    { value: "immediate", label: "即時", days: 0 },
+    { value: "1day", label: "1日後", days: 1 },
+    { value: "5days", label: "5日後", days: 5 },
+    { value: "20days", label: "20日後", days: 20 },
+    { value: "unlimited", label: "無期限", days: null },
+  ];
+
+  const calculateReviewDate = (days: number | null): Date | undefined => {
+    if (days === null) return undefined;
+    const reviewDate = new Date();
+    reviewDate.setDate(reviewDate.getDate() + days);
+    return reviewDate;
+  };
+
+  const handleModeChange = (newMode: "edit" | "study") => {
+    setCurrentMode(newMode);
+    if (newMode === "study") {
+      setContentVisible(false);
+      setStudyComplete(false);
+    } else {
+      setContentVisible(true);
+    }
+  };
+
+  const handleStudyComplete = async () => {
+    if (!reviewInterval || !id) return;
+
+    const selectedOption = reviewOptions.find(opt => opt.value === reviewInterval);
+    if (!selectedOption) return;
+
+    setLoading(true);
+    try {
+      const docRef = doc(db, "learnings", id);
+      const reviewDate = calculateReviewDate(selectedOption.days);
+      
+      await updateDoc(docRef, {
+        reviewDate: reviewDate || null,
+      });
+
+      setAlert({
+        open: true,
+        message: `復習期限を${selectedOption.label}に設定しました！`,
+        severity: "success",
+      });
+
+      setStudyComplete(true);
+      setTimeout(() => navigate("/"), 1500);
+    } catch (error) {
+      console.error("Error updating review date: ", error);
+      setAlert({
+        open: true,
+        message: "復習期限の設定中にエラーが発生しました。",
+        severity: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,7 +190,7 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
 
         setTopic("");
         setContent("");
-      } else if (mode === "edit" && id) {
+      } else if (currentMode === "edit" && id) {
         const docRef = doc(db, "learnings", id);
         await updateDoc(docRef, {
           topic: topic.trim(),
@@ -213,10 +288,104 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
             fontSize: { xs: "1.75rem", sm: "2rem", md: "2.125rem" },
           }}
         >
-          {mode === "add" ? "新規学習内容登録" : "学習内容編集"}
+          {mode === "add" ? "新規学習内容登録" : currentMode === "study" ? "学習モード" : "学習内容編集"}
         </Typography>
 
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+        {(mode === "edit" || mode === "study") && (
+          <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
+            <ToggleButtonGroup
+              value={currentMode}
+              exclusive
+              onChange={(_, newMode) => newMode && handleModeChange(newMode)}
+              aria-label="mode selection"
+            >
+              <ToggleButton value="edit" aria-label="edit mode">
+                編集モード
+              </ToggleButton>
+              <ToggleButton value="study" aria-label="study mode">
+                学習モード
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+        )}
+
+        {currentMode === "study" ? (
+          <Box sx={{ mt: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+              <Typography variant="h6" sx={{ mr: 2 }}>
+                トピック:
+              </Typography>
+              <Chip label={topic} color="primary" variant="outlined" />
+            </Box>
+
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                <Typography variant="h6" sx={{ mr: 2 }}>
+                  学習内容:
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={contentVisible ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                  onClick={() => setContentVisible(!contentVisible)}
+                >
+                  {contentVisible ? "内容を隠す" : "内容を表示"}
+                </Button>
+              </Box>
+
+              {contentVisible && (
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    minHeight: "200px",
+                    backgroundColor: "grey.50",
+                  }}
+                >
+                  <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
+                    {content}
+                  </Typography>
+                </Paper>
+              )}
+            </Box>
+
+            <Box sx={{ mb: 3 }}>
+              <FormControl fullWidth>
+                <InputLabel>復習期限を選択</InputLabel>
+                <Select
+                  value={reviewInterval}
+                  label="復習期限を選択"
+                  onChange={(e) => setReviewInterval(e.target.value)}
+                >
+                  {reviewOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+
+            <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+              <Button
+                variant="contained"
+                size="large"
+                disabled={loading || !reviewInterval || studyComplete}
+                onClick={handleStudyComplete}
+                sx={{
+                  px: { xs: 3, sm: 6 },
+                  py: 1.5,
+                  fontSize: "1.1rem",
+                  borderRadius: 2,
+                  minWidth: { xs: "200px", sm: "250px" },
+                }}
+              >
+                {loading ? "設定中..." : studyComplete ? "完了しました" : "学習完了"}
+              </Button>
+            </Box>
+          </Box>
+        ) : (
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
           <TextField
             fullWidth
             label="トピック"
@@ -275,6 +444,7 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
             </Button>
           </Box>
         </Box>
+        )}
       </Paper>
       <Snackbar
         open={alert.open}

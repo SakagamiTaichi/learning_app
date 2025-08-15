@@ -8,8 +8,10 @@ import {
   Grid,
   Fab,
   CircularProgress,
+  Chip,
+  CardActions,
 } from "@mui/material";
-import { Add as AddIcon } from "@mui/icons-material";
+import { Add as AddIcon, Edit as EditIcon, School as SchoolIcon } from "@mui/icons-material";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
@@ -19,6 +21,7 @@ interface LearningData {
   topic: string;
   content: string;
   createdAt: Date;
+  reviewDate?: Date;
 }
 
 const LearningList: React.FC = () => {
@@ -34,11 +37,15 @@ const LearningList: React.FC = () => {
           orderBy("createdAt", "desc")
         );
         const querySnapshot = await getDocs(q);
-        const learningsData = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt.toDate(),
-        })) as LearningData[];
+        const learningsData = querySnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt.toDate(),
+            reviewDate: data.reviewDate ? data.reviewDate.toDate() : undefined,
+          };
+        }) as LearningData[];
 
         setLearnings(learningsData);
       } catch (error) {
@@ -51,8 +58,37 @@ const LearningList: React.FC = () => {
     fetchLearnings();
   }, []);
 
-  const handleCardClick = (id: string) => {
+  const handleEditClick = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     navigate(`/edit/${id}`);
+  };
+
+  const handleStudyClick = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/study/${id}`);
+  };
+
+  const isOverdue = (reviewDate?: Date): boolean => {
+    if (!reviewDate) return false;
+    return new Date() > reviewDate;
+  };
+
+  const getReviewStatus = (reviewDate?: Date): { text: string; color: "success" | "warning" | "error" | "default" } => {
+    if (!reviewDate) return { text: "復習期限なし", color: "default" };
+    
+    const now = new Date();
+    const diffTime = reviewDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return { text: `復習期限切れ (${Math.abs(diffDays)}日過ぎ)`, color: "error" };
+    } else if (diffDays === 0) {
+      return { text: "今日が復習日", color: "warning" };
+    } else if (diffDays <= 3) {
+      return { text: `復習まで${diffDays}日`, color: "warning" };
+    } else {
+      return { text: `復習まで${diffDays}日`, color: "success" };
+    }
   };
 
   const handleAddNew = () => {
@@ -89,18 +125,26 @@ const LearningList: React.FC = () => {
 
   return (
     <Box sx={{ p: 3, minHeight: "100vh" }}>
-      <Typography
-        variant="h4"
-        component="h1"
-        gutterBottom
-        sx={{
-          textAlign: "center",
-          mb: 4,
-          fontSize: { xs: "1.75rem", sm: "2rem", md: "2.125rem" },
-        }}
-      >
-        学習内容一覧
-      </Typography>
+      <Box sx={{ textAlign: "center", mb: 4 }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          gutterBottom
+          sx={{
+            fontSize: { xs: "1.75rem", sm: "2rem", md: "2.125rem" },
+          }}
+        >
+          学習内容一覧
+        </Typography>
+        {learnings.some(learning => isOverdue(learning.reviewDate)) && (
+          <Chip
+            label={`復習期限切れ: ${learnings.filter(learning => isOverdue(learning.reviewDate)).length}件`}
+            color="error"
+            variant="filled"
+            sx={{ fontSize: "0.9rem", fontWeight: "bold" }}
+          />
+        )}
+      </Box>
 
       {learnings.length === 0 ? (
         <Box sx={{ textAlign: "center", mt: 8 }}>
@@ -125,61 +169,112 @@ const LearningList: React.FC = () => {
       ) : (
         <>
           <Grid container spacing={3}>
-            {learnings.map((learning) => (
-              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={learning.id}>
-                <Card
-                  sx={{
-                    cursor: "pointer",
-                    transition: "all 0.2s ease-in-out",
-                    "&:hover": {
-                      transform: "translateY(-4px)",
-                      boxShadow: 6,
-                    },
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                  onClick={() => handleCardClick(learning.id)}
-                >
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography
-                      variant="h6"
-                      component="h2"
-                      gutterBottom
+            {learnings
+              .sort((a, b) => {
+                const aOverdue = isOverdue(a.reviewDate);
+                const bOverdue = isOverdue(b.reviewDate);
+                if (aOverdue && !bOverdue) return -1;
+                if (!aOverdue && bOverdue) return 1;
+                return 0;
+              })
+              .map((learning) => {
+                const reviewStatus = getReviewStatus(learning.reviewDate);
+                const overdue = isOverdue(learning.reviewDate);
+                
+                return (
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={learning.id}>
+                    <Card
                       sx={{
-                        fontWeight: "bold",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
+                        transition: "all 0.2s ease-in-out",
+                        "&:hover": {
+                          transform: "translateY(-4px)",
+                          boxShadow: 6,
+                        },
+                        height: "100%",
+                        display: "flex",
+                        flexDirection: "column",
+                        border: overdue ? "2px solid" : "1px solid",
+                        borderColor: overdue ? "error.main" : "divider",
+                        backgroundColor: overdue ? "error.50" : "background.paper",
                       }}
                     >
-                      {learning.topic}
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{
-                        mb: 2,
-                        lineHeight: 1.6,
-                        display: "-webkit-box",
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {getContentPreview(learning.content)}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ fontWeight: "medium" }}
-                    >
-                      登録日: {formatDate(learning.createdAt)}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
+                      <CardContent sx={{ flexGrow: 1 }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
+                          <Typography
+                            variant="h6"
+                            component="h2"
+                            sx={{
+                              fontWeight: "bold",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              flex: 1,
+                              mr: 1,
+                            }}
+                          >
+                            {learning.topic}
+                          </Typography>
+                          <Chip
+                            label={reviewStatus.text}
+                            color={reviewStatus.color}
+                            size="small"
+                            variant={overdue ? "filled" : "outlined"}
+                          />
+                        </Box>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{
+                            mb: 2,
+                            lineHeight: 1.6,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {getContentPreview(learning.content)}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ fontWeight: "medium" }}
+                        >
+                          登録日: {formatDate(learning.createdAt)}
+                        </Typography>
+                        {learning.reviewDate && (
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ fontWeight: "medium", display: "block" }}
+                          >
+                            復習予定: {formatDate(learning.reviewDate)}
+                          </Typography>
+                        )}
+                      </CardContent>
+                      <CardActions sx={{ justifyContent: "space-between", px: 2, pb: 2 }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<SchoolIcon />}
+                          onClick={(e) => handleStudyClick(learning.id, e)}
+                          color={overdue ? "error" : "primary"}
+                        >
+                          学習
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<EditIcon />}
+                          onClick={(e) => handleEditClick(learning.id, e)}
+                        >
+                          編集
+                        </Button>
+                      </CardActions>
+                    </Card>
+                  </Grid>
+                );
+              })}
           </Grid>
 
           <Fab
