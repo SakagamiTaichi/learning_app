@@ -25,7 +25,7 @@ import {
   CardActionArea,
 } from "@mui/material";
 import LoadingSpinner from './LoadingSpinner';
-import { ArrowBack as ArrowBackIcon, Visibility as VisibilityIcon, VisibilityOff as VisibilityOffIcon, Delete as DeleteIcon, Link as LinkIcon } from "@mui/icons-material";
+import { ArrowBack as ArrowBackIcon, Visibility as VisibilityIcon, VisibilityOff as VisibilityOffIcon, Delete as DeleteIcon, Link as LinkIcon, Add as AddIcon, Remove as RemoveIcon, ArrowForward as ArrowForwardIcon, ArrowBack } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import {
@@ -35,6 +35,7 @@ import {
   updateLearning,
   deleteLearning,
   clearCurrentLearning,
+  type QAPair,
 } from "../store/slices/learningSlice";
 import { showAlert, hideAlert } from "../store/slices/uiSlice";
 
@@ -50,9 +51,11 @@ interface LearningListItem {
 const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
   const [topic, setTopic] = useState("");
   const [content, setContent] = useState("");
+  const [qaPairs, setQaPairs] = useState<QAPair[]>([{ question: "", answer: "" }]);
   const [currentMode, setCurrentMode] = useState(mode);
   const [reviewInterval, setReviewInterval] = useState<string>("");
   const [contentVisible, setContentVisible] = useState(mode !== "study");
+  const [currentQAIndex, setCurrentQAIndex] = useState(0);
   const [studyComplete, setStudyComplete] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [relatedLearnings, setRelatedLearnings] = useState<string[]>([]);
@@ -78,7 +81,8 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
         if (fetchLearningById.fulfilled.match(result)) {
           const data = result.payload;
           setTopic(data.topic);
-          setContent(data.content);
+          setContent(data.content || "");
+          setQaPairs(data.qaPairs && data.qaPairs.length > 0 ? data.qaPairs : [{ question: "", answer: "" }]);
           setRelatedLearnings(data.relatedLearnings || []);
           if (mode === "study") {
             setContentVisible(false);
@@ -154,18 +158,30 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!topic.trim() || !content.trim()) {
+    if (!topic.trim()) {
       dispatch(showAlert({
-        message: "トピックと学習内容の両方を入力してください。",
+        message: "トピックを入力してください。",
         severity: "error",
       }));
       return;
     }
 
+    const hasValidQA = qaPairs.some(pair => pair.question.trim() && pair.answer.trim());
+    if (!hasValidQA) {
+      dispatch(showAlert({
+        message: "少なくとも1つの問題と解答を入力してください。",
+        severity: "error",
+      }));
+      return;
+    }
+
+    const validQaPairs = qaPairs.filter(pair => pair.question.trim() && pair.answer.trim());
+
     if (mode === "add") {
       const learningData = {
         topic: topic.trim(),
-        content: content.trim(),
+        content: content.trim() || undefined,
+        qaPairs: validQaPairs,
         createdAt: new Date(),
         relatedLearnings: relatedLearnings,
       };
@@ -178,6 +194,7 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
           }));
           setTopic("");
           setContent("");
+          setQaPairs([{ question: "", answer: "" }]);
           setRelatedLearnings([]);
         } else {
           dispatch(showAlert({
@@ -191,7 +208,8 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
         id,
         data: {
           topic: topic.trim(),
-          content: content.trim(),
+          content: content.trim() || undefined,
+          qaPairs: validQaPairs,
           relatedLearnings: relatedLearnings,
         },
       })).then((result) => {
@@ -237,6 +255,39 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
 
   const handleBack = () => {
     navigate("/");
+  };
+
+  const handleAddQAPair = () => {
+    setQaPairs([...qaPairs, { question: "", answer: "" }]);
+  };
+
+  const handleRemoveQAPair = (index: number) => {
+    if (qaPairs.length > 1) {
+      setQaPairs(qaPairs.filter((_, i) => i !== index));
+      if (currentQAIndex >= qaPairs.length - 1) {
+        setCurrentQAIndex(Math.max(0, qaPairs.length - 2));
+      }
+    }
+  };
+
+  const handleQAPairChange = (index: number, field: 'question' | 'answer', value: string) => {
+    const newQaPairs = [...qaPairs];
+    newQaPairs[index][field] = value;
+    setQaPairs(newQaPairs);
+  };
+
+  const handleNextQA = () => {
+    if (currentQAIndex < qaPairs.length - 1) {
+      setCurrentQAIndex(currentQAIndex + 1);
+      setContentVisible(false);
+    }
+  };
+
+  const handlePrevQA = () => {
+    if (currentQAIndex > 0) {
+      setCurrentQAIndex(currentQAIndex - 1);
+      setContentVisible(false);
+    }
   };
 
   if (fetchLoading) {
@@ -390,9 +441,9 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
             </Box>
 
             <Box sx={{ mb: 4 }}>
-              <Box sx={{ 
-                display: "flex", 
-                alignItems: "center", 
+              <Box sx={{
+                display: "flex",
+                alignItems: "center",
                 justifyContent: "space-between",
                 mb: 3,
                 p: 2,
@@ -400,11 +451,78 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
                 borderRadius: 2
               }}>
                 <Typography variant="h6" sx={{ fontWeight: 600, color: "grey.800" }}>
-                  学習内容
+                  問題 {currentQAIndex + 1} / {qaPairs.length}
+                </Typography>
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={handlePrevQA}
+                    disabled={currentQAIndex === 0}
+                    startIcon={<ArrowBack />}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    前へ
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={handleNextQA}
+                    disabled={currentQAIndex === qaPairs.length - 1}
+                    endIcon={<ArrowForwardIcon />}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    次へ
+                  </Button>
+                </Box>
+              </Box>
+
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 4,
+                  minHeight: "200px",
+                  backgroundColor: "white",
+                  borderRadius: 2,
+                  border: "2px solid",
+                  borderColor: "primary.200",
+                  boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)",
+                  mb: 3
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ mb: 2, color: "grey.600", fontWeight: 600 }}>
+                  問題:
+                </Typography>
+                <Typography
+                  variant="body1"
+                  sx={{
+                    whiteSpace: "pre-wrap",
+                    lineHeight: 1.8,
+                    fontSize: "1.1rem",
+                    color: "grey.900",
+                    fontWeight: 500
+                  }}
+                >
+                  {qaPairs[currentQAIndex]?.question || ""}
+                </Typography>
+              </Paper>
+
+              <Box sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                mb: 2,
+                p: 2,
+                backgroundColor: "success.50",
+                borderRadius: 2
+              }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: "success.dark" }}>
+                  解答
                 </Typography>
                 <Button
                   variant={contentVisible ? "contained" : "outlined"}
                   size="medium"
+                  color="success"
                   startIcon={contentVisible ? <VisibilityOffIcon /> : <VisibilityIcon />}
                   onClick={() => setContentVisible(!contentVisible)}
                   sx={{
@@ -414,7 +532,7 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
                     minWidth: "140px"
                   }}
                 >
-                  {contentVisible ? "内容を隠す" : "内容を表示"}
+                  {contentVisible ? "解答を隠す" : "解答を表示"}
                 </Button>
               </Box>
 
@@ -423,24 +541,24 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
                   variant="outlined"
                   sx={{
                     p: 4,
-                    minHeight: "300px",
-                    backgroundColor: "white",
+                    minHeight: "200px",
+                    backgroundColor: "success.50",
                     borderRadius: 2,
                     border: "2px solid",
-                    borderColor: "grey.200",
+                    borderColor: "success.200",
                     boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)"
                   }}
                 >
-                  <Typography 
-                    variant="body1" 
-                    sx={{ 
+                  <Typography
+                    variant="body1"
+                    sx={{
                       whiteSpace: "pre-wrap",
                       lineHeight: 1.8,
                       fontSize: "1rem",
                       color: "grey.800"
                     }}
                   >
-                    {content}
+                    {qaPairs[currentQAIndex]?.answer || ""}
                   </Typography>
                 </Paper>
               )}
@@ -577,21 +695,20 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
 
           <Box sx={{ mb: 4 }}>
             <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: "grey.800" }}>
-              学習内容詳細
+              補足メモ（オプション）
             </Typography>
             <TextField
               fullWidth
-              label="学習内容"
-              placeholder="学習した内容を詳しく記録してください..."
+              label="補足情報"
+              placeholder="トピック全体に関する補足情報があれば記録してください..."
               variant="outlined"
               value={content}
               onChange={(e) => setContent(e.target.value)}
               margin="normal"
-              required
               multiline
-              minRows={10}
-              maxRows={20}
-              sx={{ 
+              minRows={4}
+              maxRows={10}
+              sx={{
                 mb: 2,
                 "& .MuiOutlinedInput-root": {
                   borderRadius: 2,
@@ -616,7 +733,7 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
                   fontSize: "1rem"
                 }
               }}
-              slotProps={{ 
+              slotProps={{
                 htmlInput: { maxLength: 3000 },
                 formHelperText: {
                   sx: {
@@ -628,6 +745,119 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
               }}
               helperText={`${content.length}/3000文字`}
             />
+          </Box>
+
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, color: "grey.800" }}>
+                問題と解答
+              </Typography>
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={handleAddQAPair}
+                sx={{
+                  borderRadius: 2,
+                  px: 2,
+                  py: 1,
+                  fontWeight: 500
+                }}
+              >
+                問題を追加
+              </Button>
+            </Box>
+
+            {qaPairs.map((pair, index) => (
+              <Box
+                key={index}
+                sx={{
+                  mb: 3,
+                  p: 3,
+                  backgroundColor: "grey.50",
+                  borderRadius: 2,
+                  border: "2px solid",
+                  borderColor: "grey.200"
+                }}
+              >
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "grey.700" }}>
+                    問題 {index + 1}
+                  </Typography>
+                  {qaPairs.length > 1 && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      color="error"
+                      startIcon={<RemoveIcon />}
+                      onClick={() => handleRemoveQAPair(index)}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      削除
+                    </Button>
+                  )}
+                </Box>
+
+                <TextField
+                  fullWidth
+                  label="問題"
+                  placeholder="問題を入力してください..."
+                  variant="outlined"
+                  value={pair.question}
+                  onChange={(e) => handleQAPairChange(index, 'question', e.target.value)}
+                  margin="normal"
+                  multiline
+                  minRows={2}
+                  maxRows={6}
+                  sx={{
+                    mb: 2,
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      backgroundColor: "white",
+                    }
+                  }}
+                  slotProps={{
+                    htmlInput: { maxLength: 1000 },
+                    formHelperText: {
+                      sx: {
+                        fontSize: "0.75rem",
+                        color: pair.question.length > 900 ? "warning.main" : "grey.600",
+                      }
+                    }
+                  }}
+                  helperText={`${pair.question.length}/1000文字`}
+                />
+
+                <TextField
+                  fullWidth
+                  label="解答"
+                  placeholder="解答を入力してください..."
+                  variant="outlined"
+                  value={pair.answer}
+                  onChange={(e) => handleQAPairChange(index, 'answer', e.target.value)}
+                  margin="normal"
+                  multiline
+                  minRows={3}
+                  maxRows={10}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      backgroundColor: "white",
+                    }
+                  }}
+                  slotProps={{
+                    htmlInput: { maxLength: 2000 },
+                    formHelperText: {
+                      sx: {
+                        fontSize: "0.75rem",
+                        color: pair.answer.length > 1800 ? "warning.main" : "grey.600",
+                      }
+                    }
+                  }}
+                  helperText={`${pair.answer.length}/2000文字`}
+                />
+              </Box>
+            ))}
           </Box>
 
           <Box sx={{ mb: 5 }}>

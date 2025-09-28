@@ -74,9 +74,17 @@ const LearningList: React.FC = () => {
     });
   };
 
-  const getContentPreview = (content: string, maxLength: number = 100) => {
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + "...";
+  const getContentPreview = (learning: typeof learnings[0], maxLength: number = 100) => {
+    if (learning.qaPairs && learning.qaPairs.length > 0) {
+      const firstQuestion = learning.qaPairs[0].question;
+      if (firstQuestion.length <= maxLength) return `Q: ${firstQuestion}`;
+      return `Q: ${firstQuestion.substring(0, maxLength)}...`;
+    }
+    if (learning.content) {
+      if (learning.content.length <= maxLength) return learning.content;
+      return learning.content.substring(0, maxLength) + "...";
+    }
+    return "内容なし";
   };
 
   const filteredLearnings = learnings.filter((learning) => {
@@ -405,7 +413,7 @@ const LearningList: React.FC = () => {
                             flex: 1
                           }}
                         >
-                          {getContentPreview(learning.content, 120)}
+                          {getContentPreview(learning, 120)}
                         </Typography>
                         
                         <Box sx={{ 
