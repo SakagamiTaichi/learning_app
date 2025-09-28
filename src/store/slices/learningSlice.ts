@@ -13,10 +13,16 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 
+export interface QAPair {
+  question: string;
+  answer: string;
+}
+
 export interface LearningData {
   id: string;
   topic: string;
-  content: string;
+  content?: string;
+  qaPairs?: QAPair[];
   createdAt: Date;
   reviewDate?: Date;
   relatedLearnings?: string[];
