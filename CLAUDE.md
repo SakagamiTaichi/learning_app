@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Japanese learning content management application built with React, TypeScript, Vite, and Firebase. The app allows users to authenticate and manage their learning materials with CRUD operations.
+This is a Japanese learning content management application built with React, TypeScript, Vite, and Firebase. The app allows users to authenticate and manage their learning materials with CRUD operations, including review scheduling and related learning tracking.
 
 ## Key Commands
 
@@ -16,33 +16,56 @@ This is a Japanese learning content management application built with React, Typ
 ## Architecture
 
 ### Tech Stack
-- **Frontend**: React 19 with TypeScript, Material-UI (MUI) for components
-- **Build Tool**: Vite with React plugin
-- **Database**: Firebase Firestore for data storage
+- **Frontend**: React 19 with TypeScript, Material-UI (MUI) v7 for components
+- **Build Tool**: Vite 7 with React plugin
+- **State Management**: Redux Toolkit (RTK) with typed hooks
+- **Database**: Firebase Firestore v12 for data storage
 - **Authentication**: Firebase Auth with email/password
-- **Routing**: React Router DOM
+- **Routing**: React Router DOM v7
 - **Styling**: Material-UI theme system with Emotion
 
 ### Project Structure
 - `src/firebase.ts` - Firebase configuration and service exports (auth, db)
-- `src/App.tsx` - Main app component with authentication state and routing
+- `src/App.tsx` - Main app component with Redux Provider, theme, routing, and lazy loading
+- `src/store/` - Redux Toolkit state management:
+  - `index.ts` - Store configuration with authReducer, learningReducer, uiReducer
+  - `hooks/index.ts` - Typed Redux hooks (useAppDispatch, useAppSelector)
+  - `slices/authSlice.ts` - Authentication state with createAsyncThunk for login/logout/initializeAuth
+  - `slices/learningSlice.ts` - Learning data state with async thunks for CRUD operations
+  - `slices/uiSlice.ts` - UI state (alerts, filters)
 - `src/components/` - React components:
   - `Login.tsx` - Email/password authentication form
-  - `LearningList.tsx` - Display learning entries in grid layout with navigation
-  - `LearningForm.tsx` - Add/edit learning entries with form validation
+  - `LearningList.tsx` - Grid display with review status, filtering, overdue alerts
+  - `LearningForm.tsx` - Add/edit entries with form validation
+  - `LearningDetail.tsx` - Detail view with related learnings navigation
+  - `Header.tsx` - App header with navigation and logout
+  - `LoadingSpinner.tsx` - Reusable loading component
 
 ### Data Model
 Learning entries stored in Firestore with:
 - `topic`: string (max 100 chars)
-- `content`: string (max 3000 chars) 
+- `content`: string (max 3000 chars)
 - `createdAt`: Date timestamp
+- `reviewDate`: Date (optional) - scheduled review date
+- `relatedLearnings`: string[] (optional) - IDs of related learning entries
+
+### State Management with Redux Toolkit
+- **Auth State**: User authentication status, loading, error handling
+- **Learning State**: Learnings list, current learning, loading states
+- **UI State**: Alert notifications, filter state, topic search filter
+- **Async Operations**: All Firebase operations use createAsyncThunk for proper loading/error states
+- **Type Safety**: Full TypeScript integration with RootState and AppDispatch types
 
 ### Authentication Flow
-App checks Firebase auth state on mount. Unauthenticated users see login form, authenticated users access the main learning interface with routing.
+App uses Redux for auth state management. On mount, `initializeAuth` thunk checks Firebase auth state. Unauthenticated users see Login component, authenticated users access main interface with routing and lazy-loaded components.
 
 ### UI/UX Patterns
-- Material-UI theme with primary blue (#1976d2) and secondary red (#dc004e)
+- Custom Material-UI theme with primary blue (#2563eb), comprehensive color palette, and modern shadows
 - Japanese text throughout interface
-- Responsive design with grid layouts
-- Loading states and error handling with snackbar notifications
+- Lazy loading for route components with Suspense fallbacks
+- Review status tracking with color-coded chips (success/warning/error)
+- Overdue learning items highlighted with red borders and alerts
+- Topic filtering with search UI
+- Responsive grid layouts with hover animations
 - Form validation with character limits and required fields
+- Loading states and error handling via Redux
