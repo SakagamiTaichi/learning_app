@@ -26,27 +26,17 @@ import {
 } from "@mui/material";
 import LoadingSpinner from './LoadingSpinner';
 import { ArrowBack as ArrowBackIcon, Visibility as VisibilityIcon, VisibilityOff as VisibilityOffIcon, Delete as DeleteIcon, Link as LinkIcon } from "@mui/icons-material";
-import {
-  collection,
-  addDoc,
-  doc,
-  getDoc,
-  updateDoc,
-  deleteDoc,
-  getDocs,
-  query,
-  orderBy,
-} from "firebase/firestore";
-import { db } from "../firebase";
 import { useNavigate, useParams } from "react-router-dom";
-
-interface LearningData {
-  topic: string;
-  content: string;
-  createdAt: Date;
-  reviewDate?: Date;
-  relatedLearnings?: string[];
-}
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import {
+  fetchLearningById,
+  fetchLearnings,
+  addLearning,
+  updateLearning,
+  deleteLearning,
+  clearCurrentLearning,
+} from "../store/slices/learningSlice";
+import { showAlert, hideAlert } from "../store/slices/uiSlice";
 
 interface LearningFormProps {
   mode: "add" | "edit" | "study" | "view";
@@ -60,90 +50,53 @@ interface LearningListItem {
 const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
   const [topic, setTopic] = useState("");
   const [content, setContent] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [fetchLoading, setFetchLoading] = useState(mode === "edit" || mode === "study" || mode === "view");
   const [currentMode, setCurrentMode] = useState(mode);
   const [reviewInterval, setReviewInterval] = useState<string>("");
   const [contentVisible, setContentVisible] = useState(mode !== "study");
   const [studyComplete, setStudyComplete] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [relatedLearnings, setRelatedLearnings] = useState<string[]>([]);
-  const [availableLearnings, setAvailableLearnings] = useState<LearningListItem[]>([]);
-  const [alert, setAlert] = useState<{
-    open: boolean;
-    message: string;
-    severity: "success" | "error";
-  }>({
-    open: false,
-    message: "",
-    severity: "success",
-  });
 
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const dispatch = useAppDispatch();
+  const { loading, fetchLoading, learnings } = useAppSelector((state) => state.learning);
+  const alert = useAppSelector((state) => state.ui.alert);
+
+  const availableLearnings: LearningListItem[] = learnings
+    .filter((learning) => learning.id !== id)
+    .map((learning) => ({
+      id: learning.id,
+      topic: learning.topic,
+    }));
 
   useEffect(() => {
-    const fetchAvailableLearnings = async () => {
-      try {
-        const q = query(
-          collection(db, "learnings"),
-          orderBy("createdAt", "desc")
-        );
-        
-        const querySnapshot = await getDocs(q);
-        const learningsList = querySnapshot.docs
-          .filter((doc) => doc.id !== id) // 自分自身を除外
-          .map((doc) => ({
-            id: doc.id,
-            topic: doc.data().topic,
-          }));
-        
-        setAvailableLearnings(learningsList);
-      } catch (error) {
-        console.error("Error fetching available learnings: ", error);
-      }
-    };
+    dispatch(fetchLearnings());
 
-    const fetchLearning = async () => {
-      if ((mode === "edit" || mode === "study" || mode === "view") && id) {
-        try {
-          const docRef = doc(db, "learnings", id);
-          const docSnap = await getDoc(docRef);
-
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            setTopic(data.topic);
-            setContent(data.content);
-            setRelatedLearnings(data.relatedLearnings || []);
-            if (mode === "study") {
-              setContentVisible(false);
-            }
-          } else {
-            setAlert({
-              open: true,
-              message: "指定された学習内容が見つかりませんでした。",
-              severity: "error",
-            });
-            setTimeout(() => navigate("/"), 2000);
+    if ((mode === "edit" || mode === "study" || mode === "view") && id) {
+      dispatch(fetchLearningById(id)).then((result) => {
+        if (fetchLearningById.fulfilled.match(result)) {
+          const data = result.payload;
+          setTopic(data.topic);
+          setContent(data.content);
+          setRelatedLearnings(data.relatedLearnings || []);
+          if (mode === "study") {
+            setContentVisible(false);
           }
-        } catch (error) {
-          console.error("Error fetching document: ", error);
-          setAlert({
-            open: true,
-            message: "データの取得中にエラーが発生しました。",
+        } else if (fetchLearningById.rejected.match(result)) {
+          dispatch(showAlert({
+            message: "指定された学習内容が見つかりませんでした。",
             severity: "error",
-          });
-        } finally {
-          setFetchLoading(false);
+          }));
+          setTimeout(() => navigate("/"), 2000);
         }
-      } else {
-        setFetchLoading(false);
-      }
-    };
+      });
+    }
 
-    fetchAvailableLearnings();
-    fetchLearning();
-  }, [mode, id, navigate]);
+    return () => {
+      dispatch(clearCurrentLearning());
+    };
+  }, [mode, id, navigate, dispatch]);
 
   const reviewOptions = [
     { value: "immediate", label: "即時", days: 0 },
@@ -176,126 +129,110 @@ const LearningForm: React.FC<LearningFormProps> = ({ mode }) => {
     const selectedOption = reviewOptions.find(opt => opt.value === reviewInterval);
     if (!selectedOption) return;
 
-    setLoading(true);
-    try {
-      const docRef = doc(db, "learnings", id);
-      const reviewDate = calculateReviewDate(selectedOption.days);
-      
-      await updateDoc(docRef, {
-        reviewDate: reviewDate || null,
-      });
+    const reviewDate = calculateReviewDate(selectedOption.days);
 
-      setAlert({
-        open: true,
-        message: `復習期限を${selectedOption.label}に設定しました！`,
-        severity: "success",
-      });
-
-      setStudyComplete(true);
-      setTimeout(() => navigate("/"), 1500);
-    } catch (error) {
-      console.error("Error updating review date: ", error);
-      setAlert({
-        open: true,
-        message: "復習期限の設定中にエラーが発生しました。",
-        severity: "error",
-      });
-    } finally {
-      setLoading(false);
-    }
+    dispatch(updateLearning({
+      id,
+      data: { reviewDate: reviewDate || undefined },
+    })).then((result) => {
+      if (updateLearning.fulfilled.match(result)) {
+        dispatch(showAlert({
+          message: `復習期限を${selectedOption.label}に設定しました！`,
+          severity: "success",
+        }));
+        setStudyComplete(true);
+        setTimeout(() => navigate("/"), 1500);
+      } else {
+        dispatch(showAlert({
+          message: "復習期限の設定中にエラーが発生しました。",
+          severity: "error",
+        }));
+      }
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!topic.trim() || !content.trim()) {
-      setAlert({
-        open: true,
+      dispatch(showAlert({
         message: "トピックと学習内容の両方を入力してください。",
         severity: "error",
-      });
+      }));
       return;
     }
 
-    setLoading(true);
+    if (mode === "add") {
+      const learningData = {
+        topic: topic.trim(),
+        content: content.trim(),
+        createdAt: new Date(),
+        relatedLearnings: relatedLearnings,
+      };
 
-    try {
-      if (mode === "add") {
-        const learningData: LearningData = {
-          topic: topic.trim(),
-          content: content.trim(),
-          createdAt: new Date(),
-          relatedLearnings: relatedLearnings,
-        };
-
-        await addDoc(collection(db, "learnings"), learningData);
-
-        setAlert({
-          open: true,
-          message: "学習内容が正常に保存されました！",
-          severity: "success",
-        });
-
-        setTopic("");
-        setContent("");
-      } else if (currentMode === "edit" && id) {
-        const docRef = doc(db, "learnings", id);
-        await updateDoc(docRef, {
-          topic: topic.trim(),
-          content: content.trim(),
-          relatedLearnings: relatedLearnings,
-        });
-
-        setAlert({
-          open: true,
-          message: "学習内容が正常に更新されました！",
-          severity: "success",
-        });
-
-        setTimeout(() => navigate("/"), 1500);
-      }
-    } catch (error) {
-      console.error("Error saving document: ", error);
-      setAlert({
-        open: true,
-        message: "保存中にエラーが発生しました。もう一度お試しください。",
-        severity: "error",
+      dispatch(addLearning(learningData)).then((result) => {
+        if (addLearning.fulfilled.match(result)) {
+          dispatch(showAlert({
+            message: "学習内容が正常に保存されました！",
+            severity: "success",
+          }));
+          setTopic("");
+          setContent("");
+          setRelatedLearnings([]);
+        } else {
+          dispatch(showAlert({
+            message: "保存中にエラーが発生しました。もう一度お試しください。",
+            severity: "error",
+          }));
+        }
       });
-    } finally {
-      setLoading(false);
+    } else if (currentMode === "edit" && id) {
+      dispatch(updateLearning({
+        id,
+        data: {
+          topic: topic.trim(),
+          content: content.trim(),
+          relatedLearnings: relatedLearnings,
+        },
+      })).then((result) => {
+        if (updateLearning.fulfilled.match(result)) {
+          dispatch(showAlert({
+            message: "学習内容が正常に更新されました！",
+            severity: "success",
+          }));
+          setTimeout(() => navigate("/"), 1500);
+        } else {
+          dispatch(showAlert({
+            message: "保存中にエラーが発生しました。もう一度お試しください。",
+            severity: "error",
+          }));
+        }
+      });
     }
   };
 
   const handleCloseAlert = () => {
-    setAlert({ ...alert, open: false });
+    dispatch(hideAlert());
   };
 
   const handleDelete = async () => {
     if (!id) return;
 
-    setLoading(true);
-    try {
-      const docRef = doc(db, "learnings", id);
-      await deleteDoc(docRef);
-
-      setAlert({
-        open: true,
-        message: "学習内容を削除しました。",
-        severity: "success",
-      });
-
-      setTimeout(() => navigate("/"), 1500);
-    } catch (error) {
-      console.error("Error deleting document: ", error);
-      setAlert({
-        open: true,
-        message: "削除中にエラーが発生しました。",
-        severity: "error",
-      });
-    } finally {
-      setLoading(false);
+    dispatch(deleteLearning(id)).then((result) => {
+      if (deleteLearning.fulfilled.match(result)) {
+        dispatch(showAlert({
+          message: "学習内容を削除しました。",
+          severity: "success",
+        }));
+        setTimeout(() => navigate("/"), 1500);
+      } else {
+        dispatch(showAlert({
+          message: "削除中にエラーが発生しました。",
+          severity: "error",
+        }));
+      }
       setDeleteDialogOpen(false);
-    }
+    });
   };
 
   const handleBack = () => {

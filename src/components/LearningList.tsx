@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import {
   Box,
   Card,
@@ -14,60 +14,26 @@ import {
   Collapse,
   InputAdornment,
 } from "@mui/material";
-import { 
-  Add as AddIcon, 
+import {
+  Add as AddIcon,
   FilterList as FilterListIcon,
   Search as SearchIcon,
-  Clear as ClearIcon 
+  Clear as ClearIcon
 } from "@mui/icons-material";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
-
-interface LearningData {
-  id: string;
-  topic: string;
-  content: string;
-  createdAt: Date;
-  reviewDate?: Date;
-  relatedLearnings?: string[];
-}
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { fetchLearnings } from "../store/slices/learningSlice";
+import { setFilterOpen, setTopicFilter, clearTopicFilter } from "../store/slices/uiSlice";
 
 const LearningList: React.FC = () => {
-  const [learnings, setLearnings] = useState<LearningData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [topicFilter, setTopicFilter] = useState("");
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const { learnings, loading } = useAppSelector((state) => state.learning);
+  const { filterOpen, topicFilter } = useAppSelector((state) => state.ui);
 
   useEffect(() => {
-    const fetchLearnings = async () => {
-      try {
-        const q = query(
-          collection(db, "learnings"),
-          orderBy("createdAt", "desc")
-        );
-        const querySnapshot = await getDocs(q);
-        const learningsData = querySnapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt.toDate(),
-            reviewDate: data.reviewDate ? data.reviewDate.toDate() : undefined,
-          };
-        }) as LearningData[];
-
-        setLearnings(learningsData);
-      } catch (error) {
-        console.error("Error fetching learnings: ", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLearnings();
-  }, []);
+    dispatch(fetchLearnings());
+  }, [dispatch]);
 
   const handleCardClick = (id: string) => {
     navigate(`/detail/${id}`);
@@ -119,11 +85,11 @@ const LearningList: React.FC = () => {
   });
 
   const handleFilterToggle = () => {
-    setFilterOpen(!filterOpen);
+    dispatch(setFilterOpen(!filterOpen));
   };
 
   const handleClearFilter = () => {
-    setTopicFilter("");
+    dispatch(clearTopicFilter());
   };
 
   if (loading) {
@@ -217,7 +183,7 @@ const LearningList: React.FC = () => {
               label="トピック名で検索"
               placeholder="検索したいトピックを入力..."
               value={topicFilter}
-              onChange={(e) => setTopicFilter(e.target.value)}
+              onChange={(e) => dispatch(setTopicFilter(e.target.value))}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">

@@ -1,8 +1,10 @@
 import { ThemeProvider, createTheme, CssBaseline, Box } from "@mui/material";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { useEffect, useState, lazy, Suspense } from "react";
-import { onAuthStateChanged, type User } from "firebase/auth";
-import { auth } from "./firebase";
+import { useEffect, lazy, Suspense } from "react";
+import { Provider } from "react-redux";
+import { store } from "./store";
+import { useAppDispatch, useAppSelector } from "./store/hooks";
+import { initializeAuth } from "./store/slices/authSlice";
 import LoadingSpinner from "./components/LoadingSpinner";
 
 const LearningList = lazy(() => import("./components/LearningList"));
@@ -246,74 +248,71 @@ const theme = createTheme({
   },
 });
 
-function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+function AppContent() {
+  const dispatch = useAppDispatch();
+  const { user, loading } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+    dispatch(initializeAuth());
+  }, [dispatch]);
 
   if (loading) {
     return (
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Box
-          sx={{
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'background.default',
-          }}
-        >
-          <LoadingSpinner message="アプリを読み込み中..." size={60} />
-        </Box>
-      </ThemeProvider>
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'background.default',
+        }}
+      >
+        <LoadingSpinner message="アプリを読み込み中..." size={60} />
+      </Box>
     );
   }
 
   if (!user) {
     return (
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Suspense fallback={<LoadingSpinner message="ログインページを読み込み中..." size={60} />}>
-          <Login />
-        </Suspense>
-      </ThemeProvider>
+      <Suspense fallback={<LoadingSpinner message="ログインページを読み込み中..." size={60} />}>
+        <Login />
+      </Suspense>
     );
   }
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Router>
-        <Box sx={{ 
-          minHeight: '100vh', 
-          width: '100%',
-          margin: 0,
-          padding: 0,
-          backgroundColor: 'background.default' 
-        }}>
-          <Suspense fallback={<LoadingSpinner message="ヘッダーを読み込み中..." size={40} />}>
-            <Header userEmail={user?.email || ''} />
-          </Suspense>
-          <Suspense fallback={<LoadingSpinner message="ページを読み込み中..." size={60} />}>
-            <Routes>
-              <Route path="/" element={<LearningList />} />
-              <Route path="/add" element={<LearningForm mode="add" />} />
-              <Route path="/detail/:id" element={<LearningDetail />} />
-              <Route path="/study/:id" element={<LearningForm mode="study" />} />
-            </Routes>
-          </Suspense>
-        </Box>
-      </Router>
-    </ThemeProvider>
+    <Router>
+      <Box sx={{
+        minHeight: '100vh',
+        width: '100%',
+        margin: 0,
+        padding: 0,
+        backgroundColor: 'background.default'
+      }}>
+        <Suspense fallback={<LoadingSpinner message="ヘッダーを読み込み中..." size={40} />}>
+          <Header userEmail={user?.email || ''} />
+        </Suspense>
+        <Suspense fallback={<LoadingSpinner message="ページを読み込み中..." size={60} />}>
+          <Routes>
+            <Route path="/" element={<LearningList />} />
+            <Route path="/add" element={<LearningForm mode="add" />} />
+            <Route path="/detail/:id" element={<LearningDetail />} />
+            <Route path="/study/:id" element={<LearningForm mode="study" />} />
+          </Routes>
+        </Suspense>
+      </Box>
+    </Router>
+  );
+}
+
+function App() {
+  return (
+    <Provider store={store}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AppContent />
+      </ThemeProvider>
+    </Provider>
   );
 }
 
