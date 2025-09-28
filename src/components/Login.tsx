@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import React, { useState, useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { login, clearError } from '../store/slices/authSlice';
 import {
   Box,
   Paper,
@@ -14,23 +14,19 @@ import {
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const dispatch = useAppDispatch();
+  const { loading, error } = useAppSelector((state) => state.auth);
+
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      console.log('ログイン成功');
-    } catch (error: unknown) {
-      setError('ログインに失敗しました。メールアドレスとパスワードを確認してください。');
-      console.error('ログインエラー:', error);
-    } finally {
-      setLoading(false);
-    }
+    dispatch(clearError());
+    dispatch(login({ email, password }));
   };
 
   return (
@@ -99,9 +95,9 @@ const Login: React.FC = () => {
           </Box>
 
           {error && (
-            <Alert 
-              severity="error" 
-              sx={{ 
+            <Alert
+              severity="error"
+              sx={{
                 mb: 3,
                 borderRadius: 2,
                 '& .MuiAlert-icon': {
@@ -109,7 +105,7 @@ const Login: React.FC = () => {
                 }
               }}
             >
-              {error}
+              ログインに失敗しました。メールアドレスとパスワードを確認してください。
             </Alert>
           )}
 

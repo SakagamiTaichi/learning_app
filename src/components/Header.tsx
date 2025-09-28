@@ -16,8 +16,8 @@ import {
   Logout as LogoutIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
-import { auth } from '../firebase';
+import { useAppDispatch } from '../store/hooks';
+import { logout } from '../store/slices/authSlice';
 
 interface HeaderProps {
   userEmail?: string;
@@ -26,13 +26,10 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ userEmail }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useAppDispatch();
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error('ログアウトエラー:', error);
-    }
+  const handleLogout = () => {
+    dispatch(logout());
   };
 
   const getBreadcrumbs = () => {
